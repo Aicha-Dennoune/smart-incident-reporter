@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "418666244200",
+    "project_id": "smart-incident-reporter-5f55e",
+    "storage_bucket": "smart-incident-reporter-5f55e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418666244200:android:543be148e685bf6cd8b3dd",
+        "android_client_info": {
+          "package_name": "com.example.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkG--J5dXwOTWyzB4hklZAoPkL2ID7MYI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
