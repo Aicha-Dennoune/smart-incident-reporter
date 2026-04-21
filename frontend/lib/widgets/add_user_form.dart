@@ -79,6 +79,7 @@ class _AddUserFormState extends State<AddUserForm> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Ajouter utilisateur'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -87,19 +88,29 @@ class _AddUserFormState extends State<AddUserForm> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildTextField(controller: _nomController, label: 'Nom'),
+                _buildTextField(
+                  controller: _nomController,
+                  label: 'Nom',
+                  icon: Icons.badge_outlined,
+                ),
                 const SizedBox(height: 10),
-                _buildTextField(controller: _prenomController, label: 'Prenom'),
+                _buildTextField(
+                  controller: _prenomController,
+                  label: 'Prenom',
+                  icon: Icons.person_outline_rounded,
+                ),
                 const SizedBox(height: 10),
                 _buildTextField(
                   controller: _telephoneController,
                   label: 'Telephone',
+                  icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 10),
                 _buildTextField(
                   controller: _emailController,
                   label: 'Email',
+                  icon: Icons.alternate_email_rounded,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -115,6 +126,7 @@ class _AddUserFormState extends State<AddUserForm> {
                 _buildTextField(
                   controller: _passwordController,
                   label: 'Mot de passe',
+                  icon: Icons.lock_outline_rounded,
                   obscureText: true,
                   validator: (value) {
                     if (value == null || value.length < 6) {
@@ -128,6 +140,7 @@ class _AddUserFormState extends State<AddUserForm> {
                   value: _role,
                   decoration: const InputDecoration(
                     labelText: 'Role',
+                    prefixIcon: Icon(Icons.assignment_ind_outlined),
                     border: OutlineInputBorder(),
                   ),
                   items:
@@ -158,6 +171,7 @@ class _AddUserFormState extends State<AddUserForm> {
                     value: _specialite,
                     decoration: const InputDecoration(
                       labelText: 'Specialite',
+                      prefixIcon: Icon(Icons.build_circle_outlined),
                       border: OutlineInputBorder(),
                     ),
                     items:
@@ -217,6 +231,7 @@ class _AddUserFormState extends State<AddUserForm> {
   TextFormField _buildTextField({
     required TextEditingController controller,
     required String label,
+    required IconData icon,
     TextInputType? keyboardType,
     bool obscureText = false,
     String? Function(String?)? validator,
@@ -227,7 +242,18 @@ class _AddUserFormState extends State<AddUserForm> {
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
-        border: const OutlineInputBorder(),
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFD9E0E5)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.4),
+        ),
+        filled: true,
+        fillColor: const Color(0xFFFAFCFD),
       ),
       validator:
           validator ??

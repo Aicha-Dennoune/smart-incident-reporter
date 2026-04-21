@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../theme/app_colors.dart';
+import '../../widgets/app_top_bar.dart';
 import 'admin_home_page.dart';
 import 'user_management_page.dart';
 
@@ -28,11 +29,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFFFFFFFF),
+        surfaceTintColor: Colors.transparent,
+        shadowColor: const Color(0x22000000),
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
         indicatorColor: AppColors.primaryGreen.withValues(alpha: 0.2),
+        animationDuration: const Duration(milliseconds: 350),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
           NavigationDestination(
@@ -65,7 +70,7 @@ class _ComingSoonPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppTopBar(title: title),
       body: Center(
         child: Text(
           '$title - bientot disponible',
@@ -90,12 +95,24 @@ class _ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
-      body: Center(
-        child: FilledButton.icon(
-          onPressed: () => _logout(context),
-          icon: const Icon(Icons.logout_rounded),
-          label: const Text('Se deconnecter'),
+      appBar: const AppTopBar(title: 'Profil'),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: SizedBox(
+            width: 320,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () => _logout(context),
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Se deconnecter'),
+            ),
+          ),
         ),
       ),
     );

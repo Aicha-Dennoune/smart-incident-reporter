@@ -36,6 +36,8 @@ class AuthService {
         return 'Problème réseau. Vérifiez votre connexion.';
       case 'operation-not-allowed':
         return 'La connexion par e-mail n’est pas activée sur ce projet.';
+      case 'email-already-in-use':
+        return 'Cette adresse e-mail est déjà utilisée.';
       default:
         return 'Connexion impossible. Vérifiez vos identifiants.';
     }

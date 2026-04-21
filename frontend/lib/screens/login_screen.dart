@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'admin/admin_dashboard.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/industrial_background.dart';
@@ -45,10 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const AdminDashboard()),
-        (route) => false,
-      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = AuthService.messageForFirebaseAuth(e);

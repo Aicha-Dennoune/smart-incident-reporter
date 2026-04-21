@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../widgets/app_top_bar.dart';
 import '../../widgets/add_user_form.dart';
 
 class UserManagementPage extends StatelessWidget {
@@ -54,7 +55,7 @@ class UserManagementPage extends StatelessWidget {
             .snapshots();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Gestion des utilisateurs')),
+      appBar: const AppTopBar(title: 'Gestion des utilisateurs'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openAddUserDialog(context),
         icon: const Icon(Icons.person_add_alt_1_rounded),
@@ -89,11 +90,44 @@ class UserManagementPage extends StatelessWidget {
               final role = data['role']?.toString() ?? '';
               final email = data['email']?.toString() ?? '';
 
-              return Card(
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: ListTile(
-                  leading: CircleAvatar(child: Text(_initials(nom, prenom))),
-                  title: Text('$nom $prenom'.trim()),
-                  subtitle: Text(email),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFFE8F5E9),
+                    child: Text(
+                      _initials(nom, prenom),
+                      style: const TextStyle(color: Color(0xFF2E7D32)),
+                    ),
+                  ),
+                  title: Text(
+                    '$nom $prenom'.trim(),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.mail_outline, size: 15),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(email)),
+                      ],
+                    ),
+                  ),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -107,7 +141,7 @@ class UserManagementPage extends StatelessWidget {
                       role,
                       style: const TextStyle(
                         color: Color(0xFF2E7D32),
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
                     ),
