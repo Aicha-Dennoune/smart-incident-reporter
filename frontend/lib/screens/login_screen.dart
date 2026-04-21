@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'admin/admin_dashboard.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/industrial_background.dart';
@@ -44,11 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connexion reussie.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const AdminDashboard()),
+        (route) => false,
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -216,7 +215,7 @@ class _LoginCard extends StatelessWidget {
                   textInputAction: TextInputAction.next,
                   decoration: _inputDecoration(
                     label: 'E-mail',
-                    hint: 'prenom.nom@ocpgroup.ma',
+                    hint: '..@ocpgroup.ma',
                     prefixIcon: Icons.alternate_email_rounded,
                   ),
                   validator: (value) {
@@ -271,29 +270,30 @@ class _LoginCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppColors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.login_rounded, size: 22),
-                              SizedBox(width: 10),
-                              Text(
-                                'Se connecter',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                    child:
+                        isLoading
+                            ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.white,
                               ),
-                            ],
-                          ),
+                            )
+                            : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.login_rounded, size: 22),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Se connecter',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                   ),
                 ),
               ],

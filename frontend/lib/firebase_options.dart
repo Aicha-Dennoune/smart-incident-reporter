@@ -79,5 +79,4 @@ class DefaultFirebaseOptions {
     authDomain: 'smart-incident-reporter-5f55e.firebaseapp.com',
     storageBucket: 'smart-incident-reporter-5f55e.firebasestorage.app',
   );
-
 }

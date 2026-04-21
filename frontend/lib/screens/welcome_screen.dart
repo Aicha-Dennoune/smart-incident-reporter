@@ -14,14 +14,8 @@ class WelcomeScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              const Expanded(
-                flex: 7,
-                child: _TopSection(),
-              ),
-              Expanded(
-                flex: 3,
-                child: _BottomCard(),
-              ),
+              const Expanded(flex: 7, child: _TopSection()),
+              Expanded(flex: 3, child: _BottomCard()),
             ],
           ),
         ),
@@ -82,9 +76,7 @@ class _TopSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: const Text(
               'Une gestion intelligente des incidents industriels — rapide, fiable, securisee.',
@@ -109,10 +101,7 @@ class _TopSection extends StatelessWidget {
               ),
               SizedBox(width: 8),
               Expanded(
-                child: _FeatureItem(
-                  icon: Icons.schedule,
-                  label: 'Temps reel',
-                ),
+                child: _FeatureItem(icon: Icons.schedule, label: 'Temps reel'),
               ),
               SizedBox(width: 8),
               Expanded(
@@ -138,10 +127,7 @@ class _TopSection extends StatelessWidget {
 }
 
 class _FeatureItem extends StatelessWidget {
-  const _FeatureItem({
-    required this.icon,
-    required this.label,
-  });
+  const _FeatureItem({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -157,10 +143,7 @@ class _FeatureItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
           ),
-          child: Icon(
-            icon,
-            color: AppColors.white,
-          ),
+          child: Icon(icon, color: AppColors.white),
         ),
         const SizedBox(height: 8),
         Text(
@@ -256,7 +239,11 @@ class _BottomCard extends StatelessWidget {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.lock_outline, size: 18, color: AppColors.primaryGreen),
+                  Icon(
+                    Icons.lock_outline,
+                    size: 18,
+                    color: AppColors.primaryGreen,
+                  ),
                   SizedBox(width: 8),
                   Flexible(
                     child: Text(

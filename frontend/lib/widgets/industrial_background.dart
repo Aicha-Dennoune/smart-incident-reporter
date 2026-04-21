@@ -17,10 +17,7 @@ class IndustrialBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppColors.gradientTop,
-            AppColors.darkGreen,
-          ],
+          colors: [AppColors.gradientTop, AppColors.darkGreen],
         ),
       ),
       child: child,
