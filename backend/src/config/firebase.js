@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const path = require("path");
 
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) {
@@ -15,7 +16,10 @@ function initializeFirebaseAdmin() {
   }
 
   try {
-    const serviceAccount = require(serviceAccountPath);
+    const absoluteServiceAccountPath = path.isAbsolute(serviceAccountPath)
+      ? serviceAccountPath
+      : path.resolve(process.cwd(), serviceAccountPath);
+    const serviceAccount = require(absoluteServiceAccountPath);
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });
