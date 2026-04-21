@@ -87,14 +87,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 24,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.warning_amber_rounded, color: Colors.red),
               SizedBox(width: 10),
-              Text('Confirmer la suppression'),
+              Expanded(
+                child: Text(
+                  'Confirmer la suppression',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           content: const Text(
@@ -167,7 +177,15 @@ class _UserManagementPageState extends State<UserManagementPage> {
             );
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final docs =
+              (snapshot.data?.docs ?? [])
+                  .where(
+                    (doc) =>
+                        (doc.data()['role']?.toString().toLowerCase().trim() ??
+                            '') !=
+                        'admin',
+                  )
+                  .toList();
           if (docs.isEmpty) {
             return const Center(child: Text('Aucun utilisateur trouve.'));
           }
@@ -197,58 +215,73 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     ),
                   ],
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFE8F5E9),
-                    child: Text(
-                      _initials(nom, prenom),
-                      style: const TextStyle(color: Color(0xFF2E7D32)),
-                    ),
-                  ),
-                  title: Text(
-                    '$nom $prenom'.trim(),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.mail_outline, size: 15),
-                        const SizedBox(width: 6),
-                        Expanded(child: Text(email)),
-                      ],
-                    ),
-                  ),
-                  trailing: Container(
-                    constraints: const BoxConstraints(minWidth: 110),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            role,
-                            style: const TextStyle(
-                              color: Color(0xFF2E7D32),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFFE8F5E9),
+                            child: Text(
+                              _initials(nom, prenom),
+                              style: const TextStyle(color: Color(0xFF2E7D32)),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextButton.icon(
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$nom $prenom'.trim(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.mail_outline, size: 15),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        email,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              role,
+                              style: const TextStyle(
+                                color: Color(0xFF2E7D32),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
                           onPressed:
                               _isDeleting
                                   ? null
@@ -263,8 +296,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
                             style: TextStyle(color: Colors.red),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );
