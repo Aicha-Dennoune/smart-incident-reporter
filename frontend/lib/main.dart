@@ -8,6 +8,7 @@ import 'screens/admin/admin_dashboard.dart';
 import 'screens/employe/employe_home_page.dart';
 import 'screens/technicien/technicien_home_page.dart';
 import 'screens/welcome_screen.dart';
+import 'theme/industrial_tokens.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,49 +19,92 @@ Future<void> main() async {
 class SmartIncidentApp extends StatelessWidget {
   const SmartIncidentApp({super.key});
 
+  static ThemeData get industrialTheme {
+    const seed = IndustrialTokens.neonMuted;
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: IndustrialTokens.bg,
+      fontFamily: 'sans-serif',
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: seed,
+        brightness: Brightness.dark,
+        surface: IndustrialTokens.card,
+        primary: IndustrialTokens.neonMuted,
+        onPrimary: IndustrialTokens.bg,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: IndustrialTokens.appBarBg,
+        foregroundColor: IndustrialTokens.textPrimary,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          color: IndustrialTokens.neon,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+        iconTheme: IconThemeData(color: IndustrialTokens.textPrimary),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: IndustrialTokens.navBg,
+        indicatorColor: IndustrialTokens.neon.withValues(alpha: 0.18),
+        surfaceTintColor: Colors.transparent,
+        elevation: 12,
+        shadowColor: Colors.black54,
+        height: 68,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: IndustrialTokens.neon);
+          }
+          return const IconThemeData(color: IndustrialTokens.navInactive);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: IndustrialTokens.neon,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            );
+          }
+          return const TextStyle(
+            color: IndustrialTokens.navInactive,
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+          );
+        }),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: IndustrialTokens.card,
+        contentTextStyle: const TextStyle(color: IndustrialTokens.textPrimary),
+        behavior: SnackBarBehavior.floating,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: IndustrialTokens.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: IndustrialTokens.neon,
+          foregroundColor: IndustrialTokens.bg,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: IndustrialTokens.neonMuted,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Smart Incident Reporter',
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFF0D1F1B),
-        fontFamily: 'sans-serif',
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF10211E),
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF10211E),
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: Colors.white,
-          indicatorColor: const Color(0xFF2E7D32).withValues(alpha: 0.18),
-          iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
-            if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(color: Color(0xFF1B5E20));
-            }
-            return const IconThemeData(color: Color(0xFF607D8B));
-          }),
-          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
-            if (states.contains(WidgetState.selected)) {
-              return const TextStyle(
-                color: Color(0xFF1B5E20),
-                fontWeight: FontWeight.w700,
-              );
-            }
-            return const TextStyle(
-              color: Color(0xFF607D8B),
-              fontWeight: FontWeight.w500,
-            );
-          }),
-        ),
-      ),
+      theme: industrialTheme,
       home: const _AuthGate(),
     );
   }

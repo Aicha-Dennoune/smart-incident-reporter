@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/backend_api_service.dart';
+import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
 import '../../widgets/add_user_form.dart';
 
@@ -87,6 +88,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: IndustrialTokens.card,
           insetPadding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 24,
@@ -103,12 +105,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   'Confirmer la suppression',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: IndustrialTokens.textPrimary),
                 ),
               ),
             ],
           ),
           content: const Text(
             'Voulez-vous vraiment supprimer cet utilisateur ?',
+            style: TextStyle(color: IndustrialTokens.textSecondary),
           ),
           actions: [
             TextButton(
@@ -158,6 +162,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
     return Scaffold(
       appBar: const AppTopBar(title: 'Gestion des utilisateurs'),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: IndustrialTokens.neon,
+        foregroundColor: IndustrialTokens.bg,
         onPressed: _isDeleting ? null : () => _openAddUserDialog(context),
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Ajouter utilisateur'),
@@ -205,11 +211,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
               return Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: IndustrialTokens.card,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: IndustrialTokens.cardBorder),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x14000000),
+                      color: Color(0x33000000),
                       blurRadius: 12,
                       offset: Offset(0, 4),
                     ),
@@ -223,10 +230,15 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           CircleAvatar(
-                            backgroundColor: const Color(0xFFE8F5E9),
+                            backgroundColor: IndustrialTokens.neon.withValues(
+                              alpha: 0.15,
+                            ),
                             child: Text(
                               _initials(nom, prenom),
-                              style: const TextStyle(color: Color(0xFF2E7D32)),
+                              style: const TextStyle(
+                                color: IndustrialTokens.neon,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -238,22 +250,53 @@ class _UserManagementPageState extends State<UserManagementPage> {
                                   '$nom $prenom'.trim(),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
+                                    color: IndustrialTokens.textPrimary,
                                   ),
                                 ),
+                                if ((data['specialite']?.toString() ?? '')
+                                    .isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Spécialité : ${data['specialite']}',
+                                    style: const TextStyle(
+                                      color: IndustrialTokens.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Icon(Icons.mail_outline, size: 15),
+                                    const Icon(
+                                      Icons.mail_outline,
+                                      size: 15,
+                                      color: IndustrialTokens.textSecondary,
+                                    ),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
                                         email,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: IndustrialTokens.textSecondary,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
+                                if (role.toLowerCase() == 'technicien') ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Score : ${data['score'] ?? 0}',
+                                    style: const TextStyle(
+                                      color: IndustrialTokens.neonMuted,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -264,13 +307,16 @@ class _UserManagementPageState extends State<UserManagementPage> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E9),
+                              color: IndustrialTokens.bg,
                               borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: IndustrialTokens.cardBorder,
+                              ),
                             ),
                             child: Text(
                               role,
                               style: const TextStyle(
-                                color: Color(0xFF2E7D32),
+                                color: IndustrialTokens.neonMuted,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
                               ),
@@ -289,11 +335,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           icon: const Icon(
                             Icons.delete_outline,
                             size: 16,
-                            color: Colors.red,
+                            color: Colors.redAccent,
                           ),
                           label: const Text(
                             'Supprimer',
-                            style: TextStyle(color: Colors.red),
+                            style: TextStyle(color: Colors.redAccent),
                           ),
                         ),
                       ),

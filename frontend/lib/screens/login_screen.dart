@@ -209,6 +209,12 @@ class _LoginCard extends StatelessWidget {
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
                   textInputAction: TextInputAction.next,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  cursorColor: Colors.black87,
                   decoration: _inputDecoration(
                     label: 'E-mail',
                     hint: '..@ocpgroup.ma',
@@ -231,6 +237,12 @@ class _LoginCard extends StatelessWidget {
                   obscureText: obscurePassword,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => onSubmit?.call(),
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  cursorColor: Colors.black87,
                   decoration: _inputDecoration(
                     label: 'Mot de passe',
                     hint: '********',
@@ -308,6 +320,12 @@ class _LoginCard extends StatelessWidget {
     return InputDecoration(
       labelText: label,
       hintText: hint,
+      labelStyle: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+      hintStyle: const TextStyle(color: Colors.black45),
+      floatingLabelStyle: const TextStyle(
+        color: Colors.black87,
+        fontWeight: FontWeight.w600,
+      ),
       filled: true,
       fillColor: _fieldFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

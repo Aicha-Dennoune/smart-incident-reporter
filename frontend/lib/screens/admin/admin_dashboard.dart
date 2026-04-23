@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../theme/app_colors.dart';
-import '../../widgets/app_top_bar.dart';
+import 'admin_affectation_page.dart';
+import 'admin_incidents_page.dart';
 import 'admin_home_page.dart';
 import 'user_management_page.dart';
 
@@ -16,27 +15,26 @@ class AdminDashboard extends StatefulWidget {
 class _AdminDashboardState extends State<AdminDashboard> {
   int _currentIndex = 0;
 
-  static const List<Widget> _pages = [
-    AdminHomePage(),
-    UserManagementPage(),
-    _ComingSoonPage(title: 'Affectation'),
-    _ComingSoonPage(title: 'Incidents'),
-    _ProfilePage(),
+  /// Pas de `const` sur les écrans avec StreamBuilder pour éviter le cache d'état.
+  late final List<Widget> _pages = [
+    const AdminHomePage(),
+    const UserManagementPage(),
+    AdminAffectationPage(key: const ValueKey('admin_affectation')),
+    AdminIncidentsPage(key: const ValueKey('admin_incidents')),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFFFFFFFF),
-        surfaceTintColor: Colors.transparent,
-        shadowColor: const Color(0x22000000),
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
-        indicatorColor: AppColors.primaryGreen.withValues(alpha: 0.2),
         animationDuration: const Duration(milliseconds: 350),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
@@ -45,75 +43,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             label: 'Utilisateurs',
           ),
           NavigationDestination(
-            icon: Icon(Icons.assignment_ind_outlined),
+            icon: Icon(Icons.swap_horiz_rounded),
             label: 'Affectation',
           ),
           NavigationDestination(
             icon: Icon(Icons.report_problem_outlined),
             label: 'Incidents',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            label: 'Profil',
-          ),
         ],
-      ),
-    );
-  }
-}
-
-class _ComingSoonPage extends StatelessWidget {
-  const _ComingSoonPage({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppTopBar(title: title),
-      body: Center(
-        child: Text(
-          '$title - bientot disponible',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfilePage extends StatelessWidget {
-  const _ProfilePage();
-
-  Future<void> _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Deconnexion reussie.')));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const AppTopBar(title: 'Profil'),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: SizedBox(
-            width: 320,
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: () => _logout(context),
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Se deconnecter'),
-            ),
-          ),
-        ),
       ),
     );
   }
