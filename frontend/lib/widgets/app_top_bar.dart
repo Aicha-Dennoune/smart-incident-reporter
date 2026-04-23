@@ -15,6 +15,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   Future<void> _openNotifications(BuildContext context) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
+    final notifService = NotificationService();
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -41,7 +42,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                   const SizedBox(height: 12),
                   Expanded(
                     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: NotificationService().watchForUser(uid),
+                      stream: notifService.watchForUser(uid),
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return Center(child: firestoreErrorPanel(snapshot.error!));
@@ -56,6 +57,9 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                         final docs = NotificationService.sortedNotificationDocs(
                           snapshot.data,
                         );
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          notifService.markAllAsReadForUser(uid);
+                        });
                         if (docs.isEmpty) {
                           return const Center(
                             child: Text(
@@ -129,7 +133,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           onPressed: () => _openNotifications(context),
           tooltip: 'Notifications',
-          icon: const Icon(Icons.notifications_none_rounded),
+          icon: _NotificationBellIcon(),
         ),
         if (showLogout)
           Padding(
@@ -158,4 +162,49 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class _NotificationBellIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const Icon(Icons.notifications_none_rounded);
+    }
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: NotificationService().watchForUser(uid),
+      builder: (context, snapshot) {
+        final unread = NotificationService.unreadCount(snapshot.data);
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(Icons.notifications_none_rounded),
+            if (unread > 0)
+              Positioned(
+                right: -4,
+                top: -3,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    unread > 99 ? '99+' : '$unread',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }

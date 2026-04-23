@@ -372,7 +372,7 @@ class IncidentService {
       await _notificationService.createForUser(
         targetUserId: createdBy,
         title: 'Incident resolu',
-        message: 'Le technicien a marque votre incident comme resolu.',
+        message: 'Incident résolu, veuillez valider',
         incidentId: incidentId,
         type: 'resolved_pending_validation',
       );
@@ -394,8 +394,7 @@ class IncidentService {
     await _notificationService.createForRole(
       role: 'admin',
       title: 'Reaffectation necessaire',
-      message:
-          'Un technicien a marque un incident comme impossible a resoudre.',
+      message: 'Incident non résolu, réaffectation requise',
       incidentId: incidentId,
       type: 'technician_refused',
     );
@@ -425,6 +424,13 @@ class IncidentService {
         );
       }
       await batch.commit();
+      await _notificationService.createForRole(
+        role: 'admin',
+        title: 'Validation employé',
+        message: 'Incident résolu avec succès',
+        incidentId: incidentId,
+        type: 'resolution_validated',
+      );
       return;
     }
 

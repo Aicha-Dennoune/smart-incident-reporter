@@ -197,6 +197,10 @@ class AdminAffectationPage extends StatelessWidget {
                                       fontSize: 13,
                                     ),
                                   ),
+                                  if (assignedTo != null && assignedTo.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    _AssignedTechnicianLabel(uid: assignedTo),
+                                  ],
                                 ],
                               ),
                             ),
@@ -480,6 +484,46 @@ class _AssignIncidentPage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _AssignedTechnicianLabel extends StatelessWidget {
+  const _AssignedTechnicianLabel({required this.uid});
+
+  final String uid;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() ?? {};
+        final prenom = data['prenom']?.toString() ?? '';
+        final nom = data['nom']?.toString() ?? '';
+        final specialite = data['specialite']?.toString() ?? '';
+        final fullName = '$prenom $nom'.trim();
+        final techLabel = fullName.isEmpty ? uid : fullName;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2C3E50),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: IndustrialTokens.cardBorder),
+          ),
+          child: Text(
+            specialite.trim().isEmpty
+                ? 'Technicien: $techLabel'
+                : 'Technicien: $techLabel • $specialite',
+            style: const TextStyle(
+              color: IndustrialTokens.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      },
     );
   }
 }

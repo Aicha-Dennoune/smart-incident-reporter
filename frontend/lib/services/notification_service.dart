@@ -13,6 +13,14 @@ class NotificationService {
     return 0;
   }
 
+  static bool isRead(Map<String, dynamic> data) {
+    final v = data['isRead'];
+    if (v is bool) return v;
+    final legacy = data['read'];
+    if (legacy is bool) return legacy;
+    return false;
+  }
+
   /// Stream brut (pas de .map) — tri côté UI avec [sortedNotificationDocs].
   ///
   /// OR sur plusieurs noms de champ : les docs ajoutés à la main dans la
@@ -43,6 +51,11 @@ class NotificationService {
     return docs;
   }
 
+  static int unreadCount(QuerySnapshot<Map<String, dynamic>>? snap) {
+    if (snap == null) return 0;
+    return snap.docs.where((d) => !isRead(d.data())).length;
+  }
+
   Future<void> createForUser({
     required String targetUserId,
     required String title,
@@ -56,6 +69,7 @@ class NotificationService {
       'message': message,
       'incidentId': incidentId,
       'type': type,
+      'isRead': false,
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -87,9 +101,36 @@ class NotificationService {
         'message': message,
         'incidentId': incidentId,
         'type': type,
+        'isRead': false,
         'read': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
+    }
+    await batch.commit();
+  }
+
+  Future<void> markAllAsReadForUser(String uid) async {
+    final snap = await _firestore
+        .collection('notifications')
+        .where(
+          Filter.or(
+            Filter('targetUserId', isEqualTo: uid),
+            Filter('userId', isEqualTo: uid),
+            Filter('target_user_id', isEqualTo: uid),
+          ),
+        )
+        .get();
+    if (snap.docs.isEmpty) return;
+
+    final batch = _firestore.batch();
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      if (!isRead(data)) {
+        batch.update(doc.reference, {
+          'isRead': true,
+          'read': true,
+        });
+      }
     }
     await batch.commit();
   }

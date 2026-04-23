@@ -34,7 +34,7 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
       case 'in_progress':
         return 'En cours';
       case 'resolved_pending_validation':
-        return 'En validation';
+        return 'À valider';
       case 'closed':
         return 'Résolu';
       default:

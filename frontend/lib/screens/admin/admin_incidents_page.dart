@@ -87,6 +87,23 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
     }
   }
 
+  String _statusFr(String status) {
+    switch (IncidentService.normStatus(status)) {
+      case 'open':
+        return 'Ouvert';
+      case 'in_progress':
+        return 'En cours';
+      case 'resolved_pending_validation':
+        return 'À valider';
+      case 'closed':
+        return 'Résolu';
+      default:
+        return status;
+    }
+  }
+
+  bool _canAssign(String status) => IncidentService.normStatus(status) == 'open';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,14 +155,19 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
                   );
                   final status = st.isEmpty ? 'open' : st;
                   final createdBy = IncidentService.creatorKey(data);
+                  final canAssign = _canAssign(status);
 
                   return InkWell(
                     borderRadius: BorderRadius.circular(16),
                     onTap:
+                        !canAssign
+                            ? null
+                            :
                         () => _showAssignBottomSheet(
                           context: context,
                           incidentId: doc.id,
                           incidentType: type,
+                          status: status,
                         ),
                     child: NeoCard(
                       accentColor: _accentForStatus(status),
@@ -167,7 +189,10 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
                                   ),
                                 ),
                               ),
-                              _StatusBadge(status: status),
+                              _StatusBadge(
+                                rawStatus: status,
+                                label: _statusFr(status),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -180,6 +205,22 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
                           ),
                           if (createdBy != null && createdBy.isNotEmpty)
                             _CreatorLine(uid: createdBy),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton(
+                              onPressed:
+                                  !canAssign
+                                      ? null
+                                      : () => _showAssignBottomSheet(
+                                        context: context,
+                                        incidentId: doc.id,
+                                        incidentType: type,
+                                        status: status,
+                                      ),
+                              child: const Text('Affecter'),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -193,7 +234,9 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
     required BuildContext context,
     required String incidentId,
     required String incidentType,
+    required String status,
   }) async {
+    if (!_canAssign(status)) return;
     final safeType = _normalizeSpeciality(incidentType);
     await showModalBottomSheet<void>(
       context: context,
@@ -359,13 +402,14 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
+  const _StatusBadge({required this.rawStatus, required this.label});
 
-  final String status;
+  final String rawStatus;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final normalized = status.toLowerCase();
+    final normalized = rawStatus.toLowerCase();
     Color bg;
     Color fg;
     if (normalized == 'in_progress') {
@@ -388,7 +432,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        status,
+        label,
         style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w800),
       ),
     );

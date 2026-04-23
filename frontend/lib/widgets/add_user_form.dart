@@ -78,16 +78,23 @@ class _AddUserFormState extends State<AddUserForm> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: const Color(0xFFE8F5E9),
       title: const Text('Ajouter utilisateur'),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       content: SizedBox(
         width: 460,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFDFF2E1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                 _buildTextField(
                   controller: _nomController,
                   label: 'Nom',
@@ -138,10 +145,31 @@ class _AddUserFormState extends State<AddUserForm> {
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   value: _role,
-                  decoration: const InputDecoration(
+                  dropdownColor: Colors.white,
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: InputDecoration(
                     labelText: 'Role',
-                    prefixIcon: Icon(Icons.assignment_ind_outlined),
-                    border: OutlineInputBorder(),
+                    labelStyle: const TextStyle(color: Colors.black87),
+                    prefixIcon: const Icon(
+                      Icons.assignment_ind_outlined,
+                      color: Colors.black87,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFD9E0E5)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF2E7D32),
+                        width: 1.4,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
                   items:
                       UserRole.values
@@ -169,10 +197,31 @@ class _AddUserFormState extends State<AddUserForm> {
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
                     value: _specialite,
-                    decoration: const InputDecoration(
+                    dropdownColor: Colors.white,
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: InputDecoration(
                       labelText: 'Specialite',
-                      prefixIcon: Icon(Icons.build_circle_outlined),
-                      border: OutlineInputBorder(),
+                      labelStyle: const TextStyle(color: Colors.black87),
+                      prefixIcon: const Icon(
+                        Icons.build_circle_outlined,
+                        color: Colors.black87,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFD9E0E5)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF2E7D32),
+                          width: 1.4,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                     items:
                         _specialites
@@ -202,7 +251,8 @@ class _AddUserFormState extends State<AddUserForm> {
                   const SizedBox(height: 12),
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -240,9 +290,11 @@ class _AddUserFormState extends State<AddUserForm> {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
+      style: const TextStyle(color: Colors.black87),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon),
+        labelStyle: const TextStyle(color: Colors.black87),
+        prefixIcon: Icon(icon, color: Colors.black87),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -253,7 +305,7 @@ class _AddUserFormState extends State<AddUserForm> {
           borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.4),
         ),
         filled: true,
-        fillColor: const Color(0xFFFAFCFD),
+        fillColor: Colors.white,
       ),
       validator:
           validator ??
