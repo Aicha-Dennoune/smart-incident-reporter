@@ -13,8 +13,10 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showLogout;
 
   Future<void> _openNotifications(BuildContext context) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final uid = currentUser?.uid;
     if (uid == null) return;
+    debugPrint('UID connecté: $uid');
     final notifService = NotificationService();
     await showModalBottomSheet<void>(
       context: context,
@@ -56,6 +58,9 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                         }
                         final docs = NotificationService.sortedNotificationDocs(
                           snapshot.data,
+                        );
+                        debugPrint(
+                          '[Notifications] snapshot.hasData=${snapshot.hasData} docs=${docs.length}',
                         );
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           notifService.markAllAsReadForUser(uid);
@@ -173,9 +178,12 @@ class _NotificationBellIcon extends StatelessWidget {
     }
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: NotificationService().watchForUser(uid),
+      stream: NotificationService().watchUnreadForUser(uid),
       builder: (context, snapshot) {
-        final unread = NotificationService.unreadCount(snapshot.data);
+        if (snapshot.hasError) {
+          return const Icon(Icons.notifications_none_rounded);
+        }
+        final unread = snapshot.data?.docs.length ?? 0;
         return Stack(
           clipBehavior: Clip.none,
           children: [

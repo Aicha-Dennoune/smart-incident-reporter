@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import 'notification_service.dart';
@@ -26,6 +25,37 @@ class IncidentService {
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
   final NotificationService _notificationService;
+
+  Future<String?> _adminId() async {
+    final snap = await _firestore
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return null;
+
+    // IMPORTANT: on utilise doc.id comme UID admin demandé.
+    final adminId = snap.docs.first.id;
+    debugPrint('Admin ID: $adminId');
+    return adminId;
+  }
+
+  Future<void> _notifyAdminsDirect({
+    required String title,
+    required String message,
+    required String type,
+    String? incidentId,
+  }) async {
+    final adminId = await _adminId();
+    if (adminId == null || adminId.isEmpty) return;
+    await _notificationService.sendNotification(
+      targetUserId: adminId,
+      title: title,
+      message: message,
+      type: type,
+      incidentId: incidentId,
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Streams Firestore bruts (pas de .map).
@@ -124,6 +154,13 @@ class IncidentService {
   static bool matchesAssignee(Map<String, dynamic> data, String uid) {
     final key = assigneeKey(data);
     return key != null && key == uid;
+  }
+
+  static String? creatorUid(Map<String, dynamic> data) {
+    final key = creatorKey(data);
+    if (key == null || key.isEmpty) return null;
+    if (key.contains('@')) return null;
+    return key;
   }
 
   static String canonicalSpeciality(String? raw) {
@@ -311,12 +348,9 @@ class IncidentService {
     }
 
     try {
-      await _notificationService.createForRole(
-        role: 'admin',
+      await _notifyAdminsDirect(
         title: 'Nouvel incident',
-        message: title.trim().isEmpty
-            ? 'Un nouvel incident a ete signale.'
-            : 'Nouvel incident : ${title.trim()}',
+        message: 'Un nouvel incident a été déclaré, veuillez l’affecter',
         incidentId: docRef.id,
         type: 'new_incident',
       );
@@ -330,8 +364,17 @@ class IncidentService {
     required String technicianUid,
     required String incidentType,
   }) async {
-    final batch = _firestore.batch();
     final incidentRef = _firestore.collection('incidents').doc(incidentId);
+    final incidentSnap = await incidentRef.get();
+    final incidentData = incidentSnap.data() ?? {};
+    final previousAssignee = assigneeKey(incidentData);
+    final creatorUidValue = creatorUid(incidentData);
+    final isReassignment =
+        previousAssignee != null &&
+        previousAssignee.isNotEmpty &&
+        previousAssignee != technicianUid;
+
+    final batch = _firestore.batch();
     final techRef = _firestore.collection('users').doc(technicianUid);
 
     batch.update(incidentRef, {
@@ -342,13 +385,37 @@ class IncidentService {
 
     await batch.commit();
 
-    await _notificationService.createForUser(
+    await _notificationService.sendNotification(
       targetUserId: technicianUid,
-      title: 'Nouvel incident assigne',
-      message: 'Incident type $incidentType assigne a votre file.',
+      title: isReassignment ? 'Incident réassigné' : 'Incident assigné',
+      message:
+          isReassignment
+              ? 'Un incident vous a été réaffecté ($incidentType)'
+              : 'Un nouvel incident vous a été assigné ($incidentType)',
       incidentId: incidentId,
-      type: 'assignment',
+      type: isReassignment ? 'reassignment' : 'assignment',
     );
+
+    if (creatorUidValue != null && creatorUidValue.isNotEmpty) {
+      await _notificationService.sendNotification(
+        targetUserId: creatorUidValue,
+        title: isReassignment ? 'Incident réaffecté' : 'Incident affecté',
+        message:
+            isReassignment
+                ? 'Votre incident a été réaffecté à un autre technicien'
+                : 'Votre incident a été pris en charge par un technicien',
+        incidentId: incidentId,
+        type: isReassignment ? 'incident_reassigned' : 'incident_assigned',
+      );
+
+      await _notificationService.sendNotification(
+        targetUserId: creatorUidValue,
+        title: 'Incident en cours',
+        message: 'Votre incident est en cours de traitement',
+        incidentId: incidentId,
+        type: 'incident_in_progress',
+      );
+    }
   }
 
   Future<void> markResolvedPendingValidation({
@@ -358,7 +425,7 @@ class IncidentService {
     final incidentRef = _firestore.collection('incidents').doc(incidentId);
     final incident = await incidentRef.get();
     final data = incident.data() ?? {};
-    final createdBy = creatorKey(data);
+    final createdBy = creatorUid(data);
 
     await incidentRef.update({
       'status': 'resolved_pending_validation',
@@ -367,8 +434,7 @@ class IncidentService {
     });
 
     if (createdBy != null &&
-        createdBy.isNotEmpty &&
-        !createdBy.contains('@')) {
+        createdBy.isNotEmpty) {
       await _notificationService.createForUser(
         targetUserId: createdBy,
         title: 'Incident resolu',
@@ -377,6 +443,14 @@ class IncidentService {
         type: 'resolved_pending_validation',
       );
     }
+
+    await _notificationService.createForRole(
+      role: 'admin',
+      title: 'Incident résolu',
+      message: 'Un incident a été résolu (en attente de validation)',
+      incidentId: incidentId,
+      type: 'resolved_waiting_validation',
+    );
   }
 
   Future<void> markImpossibleToResolve({
@@ -384,6 +458,9 @@ class IncidentService {
     required String technicianUid,
   }) async {
     final incidentRef = _firestore.collection('incidents').doc(incidentId);
+    final incident = await incidentRef.get();
+    final data = incident.data() ?? {};
+    final createdBy = creatorUid(data);
     await incidentRef.update({
       'status': 'open',
       'assignedTo': null,
@@ -391,13 +468,23 @@ class IncidentService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    await _notificationService.createForRole(
-      role: 'admin',
+    await _notifyAdminsDirect(
       title: 'Reaffectation necessaire',
-      message: 'Incident non résolu, réaffectation requise',
+      message:
+          'Un incident n’a pas pu être résolu, une réaffectation est nécessaire',
       incidentId: incidentId,
       type: 'technician_refused',
     );
+
+    if (createdBy != null && createdBy.isNotEmpty) {
+      await _notificationService.sendNotification(
+        targetUserId: createdBy,
+        title: 'Incident non résolu',
+        message: 'Votre incident n’a pas pu être traité, il sera réaffecté',
+        incidentId: incidentId,
+        type: 'incident_unresolved',
+      );
+    }
   }
 
   Future<void> validateResolvedIncident({
@@ -409,6 +496,7 @@ class IncidentService {
     final data = incident.data() ?? {};
     final technicianUid =
         (data['resolvedBy'] ?? assigneeKey(data))?.toString();
+    final createdBy = creatorUid(data);
 
     if (accepted) {
       final batch = _firestore.batch();
@@ -424,13 +512,30 @@ class IncidentService {
         );
       }
       await batch.commit();
-      await _notificationService.createForRole(
-        role: 'admin',
+      await _notifyAdminsDirect(
         title: 'Validation employé',
-        message: 'Incident résolu avec succès',
+        message: 'L’employé a validé la résolution de l’incident',
         incidentId: incidentId,
         type: 'resolution_validated',
       );
+      if (technicianUid != null && technicianUid.isNotEmpty) {
+        await _notificationService.sendNotification(
+          targetUserId: technicianUid,
+          title: 'Validation confirmée',
+          message: 'La résolution de votre incident a été validée',
+          incidentId: incidentId,
+          type: 'resolution_approved',
+        );
+      }
+      if (createdBy != null && createdBy.isNotEmpty) {
+        await _notificationService.sendNotification(
+          targetUserId: createdBy,
+          title: 'Validation enregistrée',
+          message: 'Votre validation a été enregistrée, incident clôturé',
+          incidentId: incidentId,
+          type: 'validation_confirmed',
+        );
+      }
       return;
     }
 
@@ -439,14 +544,22 @@ class IncidentService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     if (technicianUid != null && technicianUid.isNotEmpty) {
-      await _notificationService.createForUser(
+      await _notificationService.sendNotification(
         targetUserId: technicianUid,
         title: 'Resolution refusee',
-        message: 'L\'employe a refuse la resolution, veuillez reprendre.',
+        message:
+            'La résolution de l’incident a été refusée, veuillez vérifier',
         incidentId: incidentId,
         type: 'validation_rejected',
       );
     }
+    await _notificationService.createForRole(
+      role: 'admin',
+      title: 'Validation refusée',
+      message: 'La résolution d’un incident a été refusée',
+      incidentId: incidentId,
+      type: 'resolution_refused',
+    );
   }
 
   static String _contentTypeForFileName(String name) {

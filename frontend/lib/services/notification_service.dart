@@ -16,25 +16,24 @@ class NotificationService {
   static bool isRead(Map<String, dynamic> data) {
     final v = data['isRead'];
     if (v is bool) return v;
-    final legacy = data['read'];
-    if (legacy is bool) return legacy;
     return false;
   }
 
   /// Stream brut (pas de .map) — tri côté UI avec [sortedNotificationDocs].
   ///
-  /// OR sur plusieurs noms de champ : les docs ajoutés à la main dans la
-  /// console utilisent parfois `userId` au lieu de `targetUserId`.
+  /// Basé sur `targetUserId` (structure officielle des notifications).
   Stream<QuerySnapshot<Map<String, dynamic>>> watchForUser(String uid) {
     return _firestore
         .collection('notifications')
-        .where(
-          Filter.or(
-            Filter('targetUserId', isEqualTo: uid),
-            Filter('userId', isEqualTo: uid),
-            Filter('target_user_id', isEqualTo: uid),
-          ),
-        )
+        .where('targetUserId', isEqualTo: uid)
+        .snapshots(includeMetadataChanges: true);
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchUnreadForUser(String uid) {
+    return _firestore
+        .collection('notifications')
+        .where('targetUserId', isEqualTo: uid)
+        .where('isRead', isEqualTo: false)
         .snapshots(includeMetadataChanges: true);
   }
 
@@ -63,6 +62,22 @@ class NotificationService {
     String? incidentId,
     String type = 'info',
   }) async {
+    await sendNotification(
+      targetUserId: targetUserId,
+      title: title,
+      message: message,
+      type: type,
+      incidentId: incidentId,
+    );
+  }
+
+  Future<void> sendNotification({
+    required String targetUserId,
+    required String title,
+    required String message,
+    required String type,
+    String? incidentId,
+  }) async {
     await _firestore.collection('notifications').add({
       'targetUserId': targetUserId,
       'title': title,
@@ -70,7 +85,6 @@ class NotificationService {
       'incidentId': incidentId,
       'type': type,
       'isRead': false,
-      'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -102,7 +116,6 @@ class NotificationService {
         'incidentId': incidentId,
         'type': type,
         'isRead': false,
-        'read': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
@@ -112,13 +125,7 @@ class NotificationService {
   Future<void> markAllAsReadForUser(String uid) async {
     final snap = await _firestore
         .collection('notifications')
-        .where(
-          Filter.or(
-            Filter('targetUserId', isEqualTo: uid),
-            Filter('userId', isEqualTo: uid),
-            Filter('target_user_id', isEqualTo: uid),
-          ),
-        )
+        .where('targetUserId', isEqualTo: uid)
         .get();
     if (snap.docs.isEmpty) return;
 
@@ -128,7 +135,6 @@ class NotificationService {
       if (!isRead(data)) {
         batch.update(doc.reference, {
           'isRead': true,
-          'read': true,
         });
       }
     }
