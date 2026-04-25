@@ -117,27 +117,13 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
               ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Aucun incident dans cette réponse.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: IndustrialTokens.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SelectableText(
-                        firestoreListDebugFooter(null),
-                        style: const TextStyle(
-                          color: IndustrialTokens.textSecondary,
-                          height: 1.35,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                  child: const Text(
+                    'Aucun incident.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: IndustrialTokens.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               )

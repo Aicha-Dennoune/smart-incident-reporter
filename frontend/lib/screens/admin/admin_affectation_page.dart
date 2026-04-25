@@ -125,25 +125,11 @@ class AdminAffectationPage extends StatelessWidget {
               const SectionTitle('Tous les incidents'),
               const SizedBox(height: 10),
               if (all.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Aucun incident dans cette réponse.',
-                        style: TextStyle(color: IndustrialTokens.textSecondary),
-                      ),
-                      const SizedBox(height: 12),
-                      SelectableText(
-                        firestoreListDebugFooter(snapshot.data),
-                        style: const TextStyle(
-                          color: IndustrialTokens.textSecondary,
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    'Aucun incident.',
+                    style: TextStyle(color: IndustrialTokens.textSecondary),
                   ),
                 )
               else
