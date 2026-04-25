@@ -126,30 +126,16 @@ class EmployeMyIncidentsPage extends StatelessWidget {
                     email,
                   );
                   if (docs.isEmpty) {
-                    return Center(
+                    return const Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Aucun incident pour votre compte.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: IndustrialTokens.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SelectableText(
-                              '${firestoreListDebugFooter(snap)}\n'
-                              '(Si la console affiche des incidents, vérifiez le champ createdBy = votre UID.)',
-                              style: const TextStyle(
-                                color: IndustrialTokens.textSecondary,
-                                fontSize: 12,
-                                height: 1.35,
-                              ),
-                            ),
-                          ],
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Aucun incident pour le moment.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: IndustrialTokens.textSecondary,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     );

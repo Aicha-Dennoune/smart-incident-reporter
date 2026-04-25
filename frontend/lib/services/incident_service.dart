@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image/image.dart' as img;
 
 import 'notification_service.dart';
 
@@ -574,6 +575,44 @@ class IncidentService {
     return 'image/jpeg';
   }
 
+  static bool _isPngName(String name) => name.toLowerCase().endsWith('.png');
+
+  static String _replaceExtension(String fileName, String extension) {
+    final dot = fileName.lastIndexOf('.');
+    if (dot <= 0) return '$fileName.$extension';
+    return '${fileName.substring(0, dot)}.$extension';
+  }
+
+  static ({
+    Uint8List bytes,
+    String fileName,
+    String contentType,
+  }) _normalizeImageForUpload({
+    required Uint8List sourceBytes,
+    required String sourceFileName,
+  }) {
+    final decoded = img.decodeImage(sourceBytes);
+    if (decoded == null) {
+      // Fallback: on garde les bytes d'origine si le decodeur échoue.
+      final fallbackType = _contentTypeForFileName(sourceFileName);
+      return (
+        bytes: sourceBytes,
+        fileName: sourceFileName,
+        contentType: fallbackType,
+      );
+    }
+
+    if (_isPngName(sourceFileName)) {
+      final pngBytes = Uint8List.fromList(img.encodePng(decoded));
+      final pngName = _replaceExtension(sourceFileName, 'png');
+      return (bytes: pngBytes, fileName: pngName, contentType: 'image/png');
+    }
+
+    final jpgBytes = Uint8List.fromList(img.encodeJpg(decoded, quality: 85));
+    final jpgName = _replaceExtension(sourceFileName, 'jpg');
+    return (bytes: jpgBytes, fileName: jpgName, contentType: 'image/jpeg');
+  }
+
   static String _sanitizeFileName(String name) {
     var s = name.replaceAll(RegExp(r'[^\w\.\-]'), '_').replaceAll('__', '_');
     if (s.isEmpty) s = 'photo.jpg';
@@ -588,12 +627,15 @@ class IncidentService {
     String? imageName,
   }) async {
     final rawName = imageName?.trim().isNotEmpty == true ? imageName! : 'photo.jpg';
-    final safeName = _sanitizeFileName(rawName);
+    final normalized = _normalizeImageForUpload(
+      sourceBytes: imageBytes,
+      sourceFileName: rawName,
+    );
+    final safeName = _sanitizeFileName(normalized.fileName);
     final filePath = 'incidents/$createdBy/$incidentId/$safeName';
     final ref = _storage.ref().child(filePath);
-    final contentType = _contentTypeForFileName(safeName);
-    final metadata = SettableMetadata(contentType: contentType);
-    await ref.putData(imageBytes, metadata);
+    final metadata = SettableMetadata(contentType: normalized.contentType);
+    await ref.putData(normalized.bytes, metadata);
     return ref.getDownloadURL();
   }
 }

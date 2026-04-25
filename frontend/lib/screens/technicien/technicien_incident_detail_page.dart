@@ -5,6 +5,18 @@ import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
 import '../../widgets/industrial/neo_card.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+/// URL photo : uniquement le champ Firestore `imageUrl` (pas d’autres clés).
+String? _imageUrlFromIncidentMap(Map<String, dynamic> incident) {
+  final v = incident['imageUrl'];
+  if (v == null) return null;
+  if (v is String) {
+    final s = v.trim();
+    return s.isEmpty ? null : s;
+  }
+  final s = v.toString().trim();
+  return s.isEmpty ? null : s;
+}
 
 class TechnicienIncidentDetailPage extends StatelessWidget {
   const TechnicienIncidentDetailPage({
@@ -88,7 +100,7 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
             FirebaseFirestore.instance
                 .collection('incidents')
                 .doc(incidentId)
-                .snapshots(),
+                .snapshots(includeMetadataChanges: true),
         builder: (context, snap) {
           if (!snap.hasData || !snap.data!.exists) {
             return const Center(child: Text('Incident introuvable.'));
@@ -98,7 +110,9 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
           final type = _typeFr(data['type']?.toString());
           final description = data['description']?.toString() ?? '';
           final status = data['status']?.toString();
-          final imageUrl = IncidentService.imageUrlFrom(data) ?? '';
+          final imageUrl = _imageUrlFromIncidentMap(data);
+          // ignore: avoid_print, prefer_interpolation_to_compose_strings
+          print('Image URL: ' + (imageUrl ?? ''));
           final createdBy = data['createdBy']?.toString();
 
           return SingleChildScrollView(
@@ -175,35 +189,41 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child:
-                              imageUrl.isEmpty
-                                  ? Container(
-                                    color: IndustrialTokens.bg,
-                                    alignment: Alignment.center,
-                                    child: const Icon(
-                                      Icons.image_not_supported_outlined,
-                                      color: IndustrialTokens.textSecondary,
-                                      size: 40,
-                                    ),
-                                  )
-                                  : Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (_, __, ___) => Container(
-                                          color: IndustrialTokens.bg,
-                                          alignment: Alignment.center,
-                                          child: const Icon(
-                                            Icons.broken_image_outlined,
-                                            color: IndustrialTokens.textSecondary,
-                                          ),
-                                        ),
-                                  ),
-                        ),
-                      ),
+  borderRadius: BorderRadius.circular(12),
+  child: AspectRatio(
+    aspectRatio: 16 / 9,
+    child: (imageUrl != null && imageUrl.isNotEmpty)
+        ? CachedNetworkImage(
+            imageUrl: imageUrl,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: IndustrialTokens.bg,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+            errorWidget: (context, url, error) {
+              print("Erreur image: $error");
+              return Container(
+                color: IndustrialTokens.bg,
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.broken_image_outlined,
+                  color: IndustrialTokens.textSecondary,
+                ),
+              );
+            },
+          )
+        : Container(
+            color: IndustrialTokens.bg,
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.image_outlined,
+              color: IndustrialTokens.textSecondary,
+              size: 40,
+            ),
+          ),
+  ),
+),
                     ],
                   ),
                 ),
