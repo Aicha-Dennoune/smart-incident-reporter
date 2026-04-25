@@ -1,6 +1,8 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 
 import 'notification_service.dart';
@@ -16,16 +18,18 @@ class IncidentCreateResult {
 class IncidentService {
   IncidentService({
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
     NotificationService? notificationService,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _storage = storage ?? FirebaseStorage.instance,
        _notificationService =
            notificationService ?? NotificationService(firestore: firestore);
 
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
   final NotificationService _notificationService;
+  static const String _cloudinaryCloudName = 'dqkqezb7y';
+  static const String _cloudinaryUploadPreset = String.fromEnvironment(
+    'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'incident_upload',
+  );
 
   Future<String?> _adminId() async {
     final snap = await _firestore
@@ -332,19 +336,13 @@ class IncidentService {
     String? imageError;
     if (imageBytes != null && imageBytes.isNotEmpty) {
       try {
-        final url = await _uploadImage(
+        final url = await _uploadImageToCloudinary(
           imageBytes: imageBytes,
           imageName: imageName,
-          createdBy: createdBy,
-          incidentId: docRef.id,
         );
         await docRef.update({'imageUrl': url});
       } catch (e) {
         imageError = e.toString();
-        await docRef.update({
-          'imageUploadFailed': true,
-          'imageUploadError': imageError,
-        });
       }
     }
 
@@ -563,18 +561,6 @@ class IncidentService {
     );
   }
 
-  static String _contentTypeForFileName(String name) {
-    final lower = name.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    if (lower.endsWith('.gif')) return 'image/gif';
-    if (lower.endsWith('.bmp')) return 'image/bmp';
-    if (lower.endsWith('.heic') || lower.endsWith('.heif')) {
-      return 'image/heic';
-    }
-    return 'image/jpeg';
-  }
-
   static bool _isPngName(String name) => name.toLowerCase().endsWith('.png');
 
   static String _replaceExtension(String fileName, String extension) {
@@ -593,12 +579,11 @@ class IncidentService {
   }) {
     final decoded = img.decodeImage(sourceBytes);
     if (decoded == null) {
-      // Fallback: on garde les bytes d'origine si le decodeur échoue.
-      final fallbackType = _contentTypeForFileName(sourceFileName);
+      // Fallback: bytes d'origine (Cloudinary gère la détection).
       return (
         bytes: sourceBytes,
         fileName: sourceFileName,
-        contentType: fallbackType,
+        contentType: 'application/octet-stream',
       );
     }
 
@@ -620,10 +605,12 @@ class IncidentService {
     return s;
   }
 
-  Future<String> _uploadImage({
+  String _optimizedCloudinaryUrl(String secureUrl) {
+    return secureUrl.replaceFirst('/upload/', '/upload/f_auto,q_auto/');
+  }
+
+  Future<String> _uploadImageToCloudinary({
     required Uint8List imageBytes,
-    required String createdBy,
-    required String incidentId,
     String? imageName,
   }) async {
     final rawName = imageName?.trim().isNotEmpty == true ? imageName! : 'photo.jpg';
@@ -632,10 +619,32 @@ class IncidentService {
       sourceFileName: rawName,
     );
     final safeName = _sanitizeFileName(normalized.fileName);
-    final filePath = 'incidents/$createdBy/$incidentId/$safeName';
-    final ref = _storage.ref().child(filePath);
-    final metadata = SettableMetadata(contentType: normalized.contentType);
-    await ref.putData(normalized.bytes, metadata);
-    return ref.getDownloadURL();
+    final uri = Uri.parse(
+      'https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload',
+    );
+
+    final req = http.MultipartRequest('POST', uri)
+      ..fields['upload_preset'] = _cloudinaryUploadPreset
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          normalized.bytes,
+          filename: safeName,
+        ),
+      );
+
+    final response = await req.send();
+    final body = await response.stream.bytesToString();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Cloudinary upload failed (${response.statusCode}): $body',
+      );
+    }
+    final json = body.isEmpty ? <String, dynamic>{} : jsonDecode(body);
+    final secureUrl = (json['secure_url'] ?? '').toString().trim();
+    if (secureUrl.isEmpty) {
+      throw Exception('Cloudinary did not return secure_url.');
+    }
+    return _optimizedCloudinaryUrl(secureUrl);
   }
 }
