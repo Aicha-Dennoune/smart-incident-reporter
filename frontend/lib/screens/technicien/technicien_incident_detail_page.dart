@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
@@ -111,6 +112,7 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
           final description = data['description']?.toString() ?? '';
           final status = data['status']?.toString();
           final imageUrl = _imageUrlFromIncidentMap(data);
+          final location = IncidentService.locationFrom(data);
           // ignore: avoid_print, prefer_interpolation_to_compose_strings
           print('Image URL: ' + (imageUrl ?? ''));
           final createdBy = data['createdBy']?.toString();
@@ -202,6 +204,7 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
               child: const CircularProgressIndicator(),
             ),
             errorWidget: (context, url, error) {
+              // ignore: avoid_print
               print("Erreur image: $error");
               return Container(
                 color: IndustrialTokens.bg,
@@ -227,6 +230,8 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 14),
+                _IncidentLocationCard(location: location),
                 const SizedBox(height: 14),
                 if (createdBy != null && createdBy.isNotEmpty)
                   _ReporterCard(createdByUid: createdBy),
@@ -275,6 +280,67 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _IncidentLocationCard extends StatelessWidget {
+  const _IncidentLocationCard({required this.location});
+
+  final GeoPoint? location;
+
+  @override
+  Widget build(BuildContext context) {
+    return NeoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Localisation',
+            style: TextStyle(
+              color: IndustrialTokens.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 200,
+              child:
+                  location == null
+                      ? Container(
+                        color: IndustrialTokens.bg,
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Aucune localisation',
+                          style: TextStyle(
+                            color: IndustrialTokens.textSecondary,
+                          ),
+                        ),
+                      )
+                      : GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(location!.latitude, location!.longitude),
+                          zoom: 16,
+                        ),
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId('incident_location'),
+                            position: LatLng(
+                              location!.latitude,
+                              location!.longitude,
+                            ),
+                          ),
+                        },
+                        zoomControlsEnabled: false,
+                        myLocationButtonEnabled: false,
+                        compassEnabled: false,
+                      ),
+            ),
+          ),
+        ],
       ),
     );
   }

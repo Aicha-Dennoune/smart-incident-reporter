@@ -143,6 +143,19 @@ class IncidentService {
     return u;
   }
 
+  static GeoPoint? locationFrom(Map<String, dynamic> m) {
+    final raw = m['location'];
+    if (raw is GeoPoint) return raw;
+    if (raw is Map<String, dynamic>) {
+      final lat = raw['latitude'];
+      final lng = raw['longitude'];
+      if (lat is num && lng is num) {
+        return GeoPoint(lat.toDouble(), lng.toDouble());
+      }
+    }
+    return null;
+  }
+
   static bool matchesCreator(
     Map<String, dynamic> data,
     String uid,
@@ -317,6 +330,7 @@ class IncidentService {
     required String description,
     required String type,
     required String createdBy,
+    GeoPoint? location,
     Uint8List? imageBytes,
     String? imageName,
   }) async {
@@ -330,6 +344,7 @@ class IncidentService {
       'status': 'open',
       'createdBy': createdBy,
       'assignedTo': null,
+      'location': location,
       'createdAt': FieldValue.serverTimestamp(),
     });
 

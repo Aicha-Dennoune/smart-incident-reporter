@@ -1,9 +1,12 @@
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'incident_location_picker_page.dart';
 import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
@@ -28,6 +31,7 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
   String _type = 'Mecanique';
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
+  LatLng? _selectedLocation;
   bool _isSubmitting = false;
 
   static const _types = ['IT', 'Electricite', 'Mecanique', 'Eau'];
@@ -77,6 +81,13 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
         description: _descriptionController.text,
         type: _type,
         createdBy: uid,
+        location:
+            _selectedLocation == null
+                ? null
+                : GeoPoint(
+                  _selectedLocation!.latitude,
+                  _selectedLocation!.longitude,
+                ),
         imageBytes: _selectedImageBytes,
         imageName: _selectedImageName,
       );
@@ -87,6 +98,7 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
       setState(() {
         _selectedImageBytes = null;
         _selectedImageName = null;
+        _selectedLocation = null;
         _type = 'Mecanique';
       });
       if (result.imageError != null) {
@@ -114,6 +126,17 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  Future<void> _pickLocation() async {
+    final selected = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute<LatLng>(
+        builder:
+            (_) => IncidentLocationPickerPage(initialLocation: _selectedLocation),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() => _selectedLocation = selected);
   }
 
   @override
@@ -250,6 +273,36 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
                   ),
                 ),
               ],
+              const SizedBox(height: 18),
+              NeoLabeledField(
+                label: 'Localisation',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isSubmitting ? null : _pickLocation,
+                      icon: const Icon(Icons.map_outlined),
+                      label: const Text('Choisir localisation'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: IndustrialTokens.neon,
+                        side: const BorderSide(
+                          color: IndustrialTokens.neonMuted,
+                        ),
+                      ),
+                    ),
+                    if (_selectedLocation != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)} • '
+                        'Lng: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                        style: const TextStyle(
+                          color: IndustrialTokens.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               const SizedBox(height: 26),
               SizedBox(
                 width: double.infinity,
