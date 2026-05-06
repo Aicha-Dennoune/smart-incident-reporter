@@ -1,10 +1,11 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
 const { initializeFirebaseAdmin } = require("./config/firebase");
-
+const aiRoutes = require("./routes/ai.routes");
 dotenv.config();
 initializeFirebaseAdmin();
 
@@ -13,6 +14,8 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/ai", aiRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Backend is running" });
@@ -224,3 +227,4 @@ app.delete("/api/users/:uid", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
 });
+console.log("GROQ KEY:", process.env.GROQ_API_KEY);

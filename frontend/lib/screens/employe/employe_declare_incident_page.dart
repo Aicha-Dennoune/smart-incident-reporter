@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'incident_location_picker_page.dart';
+import '../../services/ai_service.dart';
 import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
@@ -33,6 +34,8 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
   String? _selectedImageName;
   LatLng? _selectedLocation;
   bool _isSubmitting = false;
+  bool _aiLoading = false;
+  final _aiService = AIService();
 
   static const _types = ['IT', 'Electricite', 'Mecanique', 'Eau'];
 
@@ -128,6 +131,52 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
     }
   }
 
+  Future<void> _improveWithAi() async {
+    if (_isSubmitting || _aiLoading) return;
+    final raw = _descriptionController.text.trim();
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Écrivez d’abord une description.')),
+      );
+      return;
+    }
+    setState(() => _aiLoading = true);
+    try {
+      final improved = await _aiService.improveDescription(raw);
+      String? suggestedType;
+      try {
+        suggestedType = await _aiService.suggestType(improved);
+      } catch (_) {
+        // Le type reste manuel si l’endpoint échoue.
+      }
+      if (!mounted) return;
+      setState(() {
+        _descriptionController.text = improved;
+        _descriptionController.selection = TextSelection.collapsed(
+          offset: improved.length,
+        );
+        if (suggestedType != null && _types.contains(suggestedType)) {
+          _type = suggestedType;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Description mise à jour par l’IA.')),
+      );
+    } on AIServiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur IA : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
+    }
+  }
+
   Future<void> _pickLocation() async {
     final selected = await Navigator.of(context).push<LatLng>(
       MaterialPageRoute<LatLng>(
@@ -182,6 +231,25 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
                               : null,
                 ),
               ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed:
+                    (_isSubmitting || _aiLoading) ? null : _improveWithAi,
+                icon:
+                    _aiLoading
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.auto_awesome_outlined),
+                label: Text(_aiLoading ? 'IA en cours…' : 'Améliorer avec IA'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: IndustrialTokens.neon,
+                  side: const BorderSide(color: IndustrialTokens.neonMuted),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
               const SizedBox(height: 18),
               NeoLabeledField(
                 label: 'Type d\'incident',
@@ -195,7 +263,7 @@ class _EmployeDeclareIncidentPageState extends State<EmployeDeclareIncidentPage>
                           label: Text(_typeDisplay(t)),
                           selected: selected,
                           onSelected:
-                              _isSubmitting
+                              (_isSubmitting || _aiLoading)
                                   ? null
                                   : (v) {
                                     if (v) setState(() => _type = t);

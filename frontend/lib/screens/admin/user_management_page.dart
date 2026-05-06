@@ -15,7 +15,17 @@ class UserManagementPage extends StatefulWidget {
 
 class _UserManagementPageState extends State<UserManagementPage> {
   final _apiService = BackendApiService();
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final ValueNotifier<String> _searchQuery = ValueNotifier<String>('');
   bool _isDeleting = false;
+
+  void _handleSearchChanged() {
+    final value = _searchController.text;
+    if (_searchQuery.value != value) {
+      _searchQuery.value = value;
+    }
+  }
 
   Future<void> _openAddUserDialog(BuildContext context) async {
     final creator = const AdminUserCreator();
@@ -152,6 +162,21 @@ class _UserManagementPageState extends State<UserManagementPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_handleSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchQuery.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final usersStream =
         FirebaseFirestore.instance
@@ -168,190 +193,239 @@ class _UserManagementPageState extends State<UserManagementPage> {
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Ajouter utilisateur'),
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: usersStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Erreur: ${snapshot.error}',
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
-
-          final docs =
-              (snapshot.data?.docs ?? [])
-                  .where(
-                    (doc) =>
-                        (doc.data()['role']?.toString().toLowerCase().trim() ??
-                            '') !=
-                        'admin',
-                  )
-                  .toList();
-          if (docs.isEmpty) {
-            return const Center(child: Text('Aucun utilisateur trouve.'));
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            itemBuilder: (_, index) {
-              final data = docs[index].data();
-              final nom = data['nom']?.toString() ?? '';
-              final prenom = data['prenom']?.toString() ?? '';
-              final role = data['role']?.toString() ?? '';
-              final email = data['email']?.toString() ?? '';
-              final uid =
-                  data['uid']?.toString().trim().isNotEmpty == true
-                      ? data['uid'].toString()
-                      : docs[index].id;
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: IndustrialTokens.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: IndustrialTokens.cardBorder),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                  child: Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: IndustrialTokens.neon.withValues(
-                              alpha: 0.15,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: ValueListenableBuilder<String>(
+              valueListenable: _searchQuery,
+              builder: (context, query, _) {
+                return TextField(
+                  focusNode: _searchFocusNode,
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  maxLines: 1,
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher (nom, email, rôle...)',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon:
+                        query.trim().isEmpty
+                            ? null
+                            : IconButton(
+                              onPressed: () => _searchController.clear(),
+                              icon: const Icon(Icons.close),
                             ),
+                    filled: true,
+                    fillColor: IndustrialTokens.card,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: IndustrialTokens.cardBorder,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: IndustrialTokens.cardBorder,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: usersStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Erreur: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+
+                final docs =
+                    (snapshot.data?.docs ?? [])
+                        .where(
+                          (doc) =>
+                              (doc.data()['role']
+                                          ?.toString()
+                                          .toLowerCase()
+                                          .trim() ??
+                                      '') !=
+                              'admin',
+                        )
+                        .toList();
+                if (docs.isEmpty) {
+                  return const Center(child: Text('Aucun utilisateur trouve.'));
+                }
+
+                return ValueListenableBuilder<String>(
+                  valueListenable: _searchQuery,
+                  builder: (context, queryValue, _) {
+                    final query = queryValue.trim().toLowerCase();
+                    final filteredDocs =
+                        query.isEmpty
+                            ? docs
+                            : docs.where((doc) {
+                              final data = doc.data();
+                              final nom =
+                                  data['nom']?.toString().toLowerCase() ?? '';
+                              final prenom =
+                                  data['prenom']?.toString().toLowerCase() ?? '';
+                              final email =
+                                  data['email']?.toString().toLowerCase() ?? '';
+                              final role =
+                                  data['role']?.toString().toLowerCase() ?? '';
+                              final specialite =
+                                  data['specialite']
+                                      ?.toString()
+                                      .toLowerCase() ??
+                                  '';
+                              return nom.contains(query) ||
+                                  prenom.contains(query) ||
+                                  email.contains(query) ||
+                                  role.contains(query) ||
+                                  specialite.contains(query);
+                            }).toList();
+
+                    if (filteredDocs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Aucun utilisateur ne correspond a la recherche.',
+                        ),
+                      );
+                    }
+
+                    final technicians =
+                        filteredDocs.where((doc) {
+                          final role =
+                              doc.data()['role']?.toString().toLowerCase().trim();
+                          return role == 'technicien';
+                        }).toList()
+                          ..sort((a, b) {
+                            final sa = (a.data()['score'] as num?)?.toInt() ?? 0;
+                            final sb = (b.data()['score'] as num?)?.toInt() ?? 0;
+                            return sb.compareTo(sa);
+                          });
+                    final employees =
+                        filteredDocs.where((doc) {
+                          final role =
+                              doc.data()['role']?.toString().toLowerCase().trim();
+                          return role == 'employe';
+                        }).toList();
+
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      children: [
+                        const _UserSectionTitle('Techniciens'),
+                        const SizedBox(height: 8),
+                        if (technicians.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
                             child: Text(
-                              _initials(nom, prenom),
-                              style: const TextStyle(
-                                color: IndustrialTokens.neon,
-                                fontWeight: FontWeight.w800,
+                              'Aucun technicien.',
+                              style: TextStyle(
+                                color: IndustrialTokens.textSecondary,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$nom $prenom'.trim(),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: IndustrialTokens.textPrimary,
-                                  ),
-                                ),
-                                if ((data['specialite']?.toString() ?? '')
-                                    .isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Spécialité : ${data['specialite']}',
-                                    style: const TextStyle(
-                                      color: IndustrialTokens.textSecondary,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 4),
-                                Row(
+                          )
+                        else
+                          ...technicians.map((doc) {
+                            final data = doc.data();
+                            final nom = data['nom']?.toString() ?? '';
+                            final prenom = data['prenom']?.toString() ?? '';
+                            final role = data['role']?.toString() ?? '';
+                            final email = data['email']?.toString() ?? '';
+                            final uid =
+                                data['uid']?.toString().trim().isNotEmpty == true
+                                    ? data['uid'].toString()
+                                    : doc.id;
+                            final score = (data['score'] as num?)?.toInt() ?? 0;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _UserCard(
+                                initials: _initials(nom, prenom),
+                                fullName: '$nom $prenom'.trim(),
+                                email: email,
+                                role: role,
+                                specialite: data['specialite']?.toString() ?? '',
+                                trailingInfo: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(
-                                      Icons.mail_outline,
-                                      size: 15,
-                                      color: IndustrialTokens.textSecondary,
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 16,
                                     ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        email,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: IndustrialTokens.textSecondary,
-                                          fontSize: 13,
-                                        ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '$score',
+                                      style: const TextStyle(
+                                        color: IndustrialTokens.neonMuted,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ],
                                 ),
-                                if (role.toLowerCase() == 'technicien') ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Score : ${data['score'] ?? 0}',
-                                    style: const TextStyle(
-                                      color: IndustrialTokens.neonMuted,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: IndustrialTokens.bg,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: IndustrialTokens.cardBorder,
+                                onDelete:
+                                    _isDeleting
+                                        ? null
+                                        : () => _confirmAndDeleteUser(uid: uid),
                               ),
-                            ),
-                            child: Text(
-                              role,
-                              style: const TextStyle(
-                                color: IndustrialTokens.neonMuted,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
+                            );
+                          }),
+                        const SizedBox(height: 16),
+                        const _UserSectionTitle('Employés'),
+                        const SizedBox(height: 8),
+                        if (employees.isEmpty)
+                          const Text(
+                            'Aucun employé.',
+                            style: TextStyle(color: IndustrialTokens.textSecondary),
+                          )
+                        else
+                          ...employees.map((doc) {
+                            final data = doc.data();
+                            final nom = data['nom']?.toString() ?? '';
+                            final prenom = data['prenom']?.toString() ?? '';
+                            final role = data['role']?.toString() ?? '';
+                            final email = data['email']?.toString() ?? '';
+                            final uid =
+                                data['uid']?.toString().trim().isNotEmpty == true
+                                    ? data['uid'].toString()
+                                    : doc.id;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: _UserCard(
+                                initials: _initials(nom, prenom),
+                                fullName: '$nom $prenom'.trim(),
+                                email: email,
+                                role: role,
+                                specialite: '',
+                                trailingInfo: null,
+                                onDelete:
+                                    _isDeleting
+                                        ? null
+                                        : () => _confirmAndDeleteUser(uid: uid),
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          onPressed:
-                              _isDeleting
-                                  ? null
-                                  : () => _confirmAndDeleteUser(uid: uid),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            size: 16,
-                            color: Colors.redAccent,
-                          ),
-                          label: const Text(
-                            'Supprimer',
-                            style: TextStyle(color: Colors.redAccent),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemCount: docs.length,
-          );
-        },
+                            );
+                          }),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -361,5 +435,175 @@ class _UserManagementPageState extends State<UserManagementPage> {
     final p = prenom.isNotEmpty ? prenom[0].toUpperCase() : '';
     final val = '$n$p';
     return val.isEmpty ? '?' : val;
+  }
+}
+
+class _UserSectionTitle extends StatelessWidget {
+  const _UserSectionTitle(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: IndustrialTokens.neon,
+        fontWeight: FontWeight.w800,
+        fontSize: 16,
+      ),
+    );
+  }
+}
+
+class _UserCard extends StatelessWidget {
+  const _UserCard({
+    required this.initials,
+    required this.fullName,
+    required this.email,
+    required this.role,
+    required this.specialite,
+    required this.trailingInfo,
+    required this.onDelete,
+  });
+
+  final String initials;
+  final String fullName;
+  final String email;
+  final String role;
+  final String specialite;
+  final Widget? trailingInfo;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: IndustrialTokens.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: IndustrialTokens.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: IndustrialTokens.neon.withValues(alpha: 0.15),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: IndustrialTokens.neon,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: IndustrialTokens.textPrimary,
+                        ),
+                      ),
+                      if (specialite.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Spécialité : $specialite',
+                          style: const TextStyle(
+                            color: IndustrialTokens.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.mail_outline,
+                            size: 15,
+                            color: IndustrialTokens.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: IndustrialTokens.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: IndustrialTokens.bg,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: IndustrialTokens.cardBorder),
+                      ),
+                      child: Text(
+                        role,
+                        style: const TextStyle(
+                          color: IndustrialTokens.neonMuted,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    if (trailingInfo != null) ...[
+                      const SizedBox(height: 6),
+                      trailingInfo!,
+                    ],
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 16,
+                  color: Colors.redAccent,
+                ),
+                label: const Text(
+                  'Supprimer',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -6,6 +6,7 @@ import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
 import '../../widgets/industrial/neo_card.dart';
+import '../../widgets/technician_incident_ai_panel.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 /// URL photo : uniquement le champ Firestore `imageUrl` (pas d’autres clés).
 String? _imageUrlFromIncidentMap(Map<String, dynamic> incident) {
@@ -176,6 +177,11 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 14),
+                TechnicianIncidentAiPanel(
+                  key: ValueKey<String>(description),
+                  description: description,
                 ),
                 const SizedBox(height: 14),
                 NeoCard(
