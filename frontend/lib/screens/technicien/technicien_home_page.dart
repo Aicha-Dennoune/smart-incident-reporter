@@ -9,6 +9,8 @@ import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
 import '../../widgets/industrial/neo_card.dart';
 import '../../widgets/industrial/section_title.dart';
+import '../chat/incident_chat_page.dart';
+import '../../services/chat_service.dart';
 import 'technicien_incident_detail_page.dart';
 
 class TechnicienHomePage extends StatefulWidget {
@@ -26,7 +28,7 @@ class _TechnicienHomePageState extends State<TechnicienHomePage> {
     _TechHomeTab(key: const ValueKey('tech_home'), uid: _uid),
     _TechIncidentsTab(key: const ValueKey('tech_incidents'), uid: _uid),
     _TechActivitesTab(key: const ValueKey('tech_activites'), uid: _uid),
-    const _TechRessourcesTab(key: ValueKey<String>('tech_tools')),
+    _TechDiscussionsTab(key: const ValueKey<String>('tech_discussions'), uid: _uid),
   ];
 
   @override
@@ -50,8 +52,8 @@ class _TechnicienHomePageState extends State<TechnicienHomePage> {
             label: 'Activités',
           ),
           NavigationDestination(
-            icon: Icon(Icons.build_circle_outlined),
-            label: 'Outils',
+            icon: Icon(Icons.chat_bubble_outline_rounded),
+            label: 'Discussions',
           ),
         ],
       ),
@@ -579,28 +581,210 @@ class _TechActivitesTab extends StatelessWidget {
   }
 }
 
-class _TechRessourcesTab extends StatelessWidget {
-  const _TechRessourcesTab({super.key});
+class _TechDiscussionsTab extends StatelessWidget {
+  const _TechDiscussionsTab({super.key, required this.uid});
+
+  final String? uid;
 
   @override
   Widget build(BuildContext context) {
+    if (uid == null) {
+      return const Scaffold(body: Center(child: Text('Non connecté')));
+    }
+    final service = IncidentService();
     return Scaffold(
-      appBar: const AppTopBar(title: 'Outils'),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          NeoCard(
-            child: Text(
-              'Consignes internes, checklists et contacts d\'astreinte '
-              'peuvent être centralisés ici (contenu statique pour la démo).',
-              style: TextStyle(
-                color: IndustrialTokens.textSecondary.withValues(alpha: 0.95),
-                height: 1.4,
+      appBar: const AppTopBar(title: 'Discussions'),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: service.watchIncidents(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: firestoreErrorPanel(snapshot.error!));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final docs = IncidentService.incidentsForAssignee(snapshot.data, uid!);
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text(
+                'Aucune discussion disponible.',
+                style: TextStyle(color: IndustrialTokens.textSecondary),
               ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+            itemCount: docs.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final doc = docs[i];
+              return _DiscussionIncidentCard(
+                incidentId: doc.id,
+                incidentData: doc.data(),
+                technicianUid: uid!,
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DiscussionIncidentCard extends StatelessWidget {
+  const _DiscussionIncidentCard({
+    required this.incidentId,
+    required this.incidentData,
+    required this.technicianUid,
+  });
+
+  final String incidentId;
+  final Map<String, dynamic> incidentData;
+  final String technicianUid;
+
+  @override
+  Widget build(BuildContext context) {
+    final chat = ChatService();
+    final title = incidentData['title']?.toString() ?? 'Incident';
+    final creatorUid = IncidentService.creatorUid(incidentData);
+    return NeoCard(
+      child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: chat.watchLatestMessage(incidentId),
+        builder: (context, latestSnap) {
+          final latest = latestSnap.data?.docs.isNotEmpty == true
+              ? latestSnap.data!.docs.first.data()
+              : null;
+          final lastText = latest?['text']?.toString() ?? 'Aucun message';
+          final lastTs = latest?['createdAt'] as Timestamp?;
+          final hh = lastTs == null
+              ? '--:--'
+              : '${lastTs.toDate().hour.toString().padLeft(2, '0')}:${lastTs.toDate().minute.toString().padLeft(2, '0')}';
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => IncidentChatPage(
+                    incidentId: incidentId,
+                    incidentTitle: title,
+                    currentUserId: technicianUid,
+                    currentUserRole: 'technicien',
+                    otherUserId: creatorUid ?? '',
+                  ),
+                ),
+              );
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: IndustrialTokens.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (creatorUid != null)
+                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(creatorUid)
+                              .snapshots(),
+                          builder: (context, creatorSnap) {
+                            final c = creatorSnap.data?.data() ?? {};
+                            final name =
+                                '${c['prenom'] ?? ''} ${c['nom'] ?? ''}'.trim();
+                            return Text(
+                              'Employé: ${name.isEmpty ? creatorUid : name}',
+                              style: const TextStyle(
+                                color: IndustrialTokens.textSecondary,
+                                fontSize: 12,
+                              ),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 4),
+                      Text(
+                        lastText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: IndustrialTokens.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      hh,
+                      style: const TextStyle(
+                        color: IndustrialTokens.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _UnreadBadge(incidentId: incidentId, currentUserId: technicianUid),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.incidentId, required this.currentUserId});
+
+  final String incidentId;
+  final String currentUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    final chat = ChatService();
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: chat.watchMessages(incidentId),
+      builder: (context, snapshot) {
+        var unread = 0;
+        if (snapshot.hasData) {
+          for (final m in snapshot.data!.docs) {
+            final d = m.data();
+            final senderId = d['senderId']?.toString() ?? '';
+            final readBy = List<String>.from((d['readBy'] as List?) ?? const []);
+            if (senderId != currentUserId && !readBy.contains(currentUserId)) {
+              unread++;
+            }
+          }
+        }
+        if (unread <= 0) return const SizedBox.shrink();
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            unread > 99 ? '99+' : '$unread',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

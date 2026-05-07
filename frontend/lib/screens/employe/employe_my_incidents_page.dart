@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../chat/incident_chat_page.dart';
+import '../../services/chat_service.dart';
 import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../utils/firestore_debug.dart';
@@ -153,38 +155,59 @@ class EmployeMyIncidentsPage extends StatelessWidget {
                         data['status']?.toString(),
                       );
                       final status = st.isEmpty ? 'open' : st;
+                      final assignedTo = IncidentService.assigneeKey(data);
+                      final canChat =
+                          assignedTo != null && assignedTo.trim().isNotEmpty;
                       return NeoCard(
                         accentColor: _statusAccent(status),
                         accentWidth: 5,
-                        child: Row(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      color: IndustrialTokens.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                    ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: const TextStyle(
+                                          color: IndustrialTokens.textPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '$type • ${_statusFr(status)}',
+                                        style: const TextStyle(
+                                          color: IndustrialTokens.textSecondary,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '$type • ${_statusFr(status)}',
-                                    style: const TextStyle(
-                                      color: IndustrialTokens.textSecondary,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 8),
+                                _statusPill(status),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            _statusPill(status),
+                            if (canChat) ...[
+                              const SizedBox(height: 10),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: _EmployeChatButton(
+                                  incidentId: doc.id,
+                                  incidentTitle: title,
+                                  currentUserId: uid,
+                                  technicianUid: assignedTo,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );
@@ -192,6 +215,92 @@ class EmployeMyIncidentsPage extends StatelessWidget {
                   );
                 },
               ),
+    );
+  }
+}
+
+class _EmployeChatButton extends StatelessWidget {
+  const _EmployeChatButton({
+    required this.incidentId,
+    required this.incidentTitle,
+    required this.currentUserId,
+    required this.technicianUid,
+  });
+
+  final String incidentId;
+  final String incidentTitle;
+  final String currentUserId;
+  final String technicianUid;
+
+  @override
+  Widget build(BuildContext context) {
+    final chat = ChatService();
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: chat.watchMessages(incidentId),
+      builder: (context, snap) {
+        var unread = 0;
+        if (snap.hasData) {
+          for (final m in snap.data!.docs) {
+            final d = m.data();
+            final senderId = d['senderId']?.toString() ?? '';
+            final readBy = List<String>.from((d['readBy'] as List?) ?? const []);
+            if (senderId != currentUserId && !readBy.contains(currentUserId)) {
+              unread++;
+            }
+          }
+        }
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder:
+                        (_) => IncidentChatPage(
+                          incidentId: incidentId,
+                          incidentTitle: incidentTitle,
+                          currentUserId: currentUserId,
+                          currentUserRole: 'employe',
+                          otherUserId: technicianUid,
+                        ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.chat_bubble_outline_rounded),
+              label: const Text('Discuter'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: IndustrialTokens.neon,
+                side: const BorderSide(color: IndustrialTokens.neonMuted),
+              ),
+            ),
+            if (unread > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.all(Radius.circular(999)),
+                  ),
+                  child: Text(
+                    unread > 99 ? '99+' : '$unread',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
