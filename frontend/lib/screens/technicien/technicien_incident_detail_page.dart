@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
@@ -296,6 +297,23 @@ class _IncidentLocationCard extends StatelessWidget {
 
   final GeoPoint? location;
 
+  Future<void> _openInGoogleMaps(BuildContext context) async {
+    if (location == null) return;
+    final lat = location!.latitude;
+    final lng = location!.longitude;
+    final url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+    final ok = await launchUrl(url, mode: LaunchMode.platformDefault);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d’ouvrir Google Maps.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return NeoCard(
@@ -346,6 +364,21 @@ class _IncidentLocationCard extends StatelessWidget {
                       ),
             ),
           ),
+          if (location != null) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: () => _openInGoogleMaps(context),
+                icon: const Icon(Icons.map_outlined),
+                label: const Text('Ouvrir dans Google Maps'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: IndustrialTokens.neon,
+                  side: const BorderSide(color: IndustrialTokens.neonMuted),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
