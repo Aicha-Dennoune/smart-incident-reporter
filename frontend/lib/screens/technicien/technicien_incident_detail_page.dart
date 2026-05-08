@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../services/incident_pdf_service.dart';
 import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
@@ -242,6 +244,20 @@ class TechnicienIncidentDetailPage extends StatelessWidget {
                 const SizedBox(height: 14),
                 if (createdBy != null && createdBy.isNotEmpty)
                   _ReporterCard(createdByUid: createdBy),
+                const SizedBox(height: 14),
+                _ExportPdfButton(
+                  incidentId: incidentId,
+                  incidentTitle: title,
+                  incidentType: type,
+                  incidentDescription: description,
+                  incidentStatus: _statusFr(status),
+                  createdAt: data['createdAt'] as Timestamp?,
+                  resolvedAt: data['resolvedAt'] as Timestamp?,
+                  createdByKey: createdBy,
+                  technicianUid: technicianUid,
+                  location: location,
+                  imageUrl: imageUrl,
+                ),
                 const SizedBox(height: 20),
                 if (status == 'in_progress')
                   Row(
@@ -430,6 +446,157 @@ class _ReporterCard extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ExportPdfButton extends StatefulWidget {
+  const _ExportPdfButton({
+    required this.incidentId,
+    required this.incidentTitle,
+    required this.incidentType,
+    required this.incidentDescription,
+    required this.incidentStatus,
+    required this.createdAt,
+    required this.resolvedAt,
+    required this.createdByKey,
+    required this.technicianUid,
+    required this.location,
+    required this.imageUrl,
+  });
+
+  final String incidentId;
+  final String incidentTitle;
+  final String incidentType;
+  final String incidentDescription;
+  final String incidentStatus;
+  final Timestamp? createdAt;
+  final Timestamp? resolvedAt;
+  final String? createdByKey;
+  final String technicianUid;
+  final GeoPoint? location;
+  final String? imageUrl;
+
+  @override
+  State<_ExportPdfButton> createState() => _ExportPdfButtonState();
+}
+
+class _ExportPdfButtonState extends State<_ExportPdfButton> {
+  final _pdfService = IncidentPdfService();
+  bool _busy = false;
+
+  Future<String> _displayNameByUserKey(String? key) async {
+    final value = key?.trim() ?? '';
+    if (value.isEmpty) return '—';
+    final users = FirebaseFirestore.instance.collection('users');
+    DocumentSnapshot<Map<String, dynamic>>? doc;
+
+    if (!value.contains('@')) {
+      final byId = await users.doc(value).get();
+      if (byId.exists) doc = byId;
+    } else {
+      final q = await users.where('email', isEqualTo: value).limit(1).get();
+      if (q.docs.isNotEmpty) doc = q.docs.first;
+    }
+    if (doc == null || !doc.exists) return value;
+    final d = doc.data() ?? {};
+    final name = '${d['prenom'] ?? ''} ${d['nom'] ?? ''}'.trim();
+    return name.isEmpty ? value : name;
+  }
+
+  Future<void> _onExportPressed() async {
+    final solutionController = TextEditingController();
+    final solution = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Solution technique appliquée'),
+            content: TextField(
+              controller: solutionController,
+              minLines: 4,
+              maxLines: 8,
+              decoration: const InputDecoration(
+                hintText: 'Décrivez la solution appliquée…',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Annuler'),
+              ),
+              FilledButton(
+                onPressed:
+                    () => Navigator.of(ctx).pop(solutionController.text.trim()),
+                child: const Text('Générer le PDF'),
+              ),
+            ],
+          ),
+    );
+    solutionController.dispose();
+    if (!mounted || solution == null) return;
+
+    setState(() => _busy = true);
+    try {
+      final reporterName = await _displayNameByUserKey(widget.createdByKey);
+      final technicianName = await _displayNameByUserKey(widget.technicianUid);
+      final locationLabel =
+          widget.location == null
+              ? null
+              : 'Latitude: ${widget.location!.latitude.toStringAsFixed(6)}\n'
+                  'Longitude: ${widget.location!.longitude.toStringAsFixed(6)}';
+
+      final bytes = await _pdfService.buildIncidentPdf(
+        IncidentPdfPayload(
+          incidentTitle: widget.incidentTitle,
+          incidentType: widget.incidentType,
+          incidentDescription: widget.incidentDescription,
+          incidentStatus: widget.incidentStatus,
+          createdAt: widget.createdAt?.toDate(),
+          resolvedAt: widget.resolvedAt?.toDate(),
+          reporterName: reporterName,
+          technicianName: technicianName,
+          locationLabel: locationLabel,
+          imageUrl: widget.imageUrl,
+          solutionText: solution,
+        ),
+      );
+
+      final filename = 'rapport_incident_${widget.incidentId}.pdf';
+      await Printing.layoutPdf(
+        onLayout: (_) async => bytes,
+        name: filename,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur PDF: $e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: OutlinedButton.icon(
+        onPressed: _busy ? null : _onExportPressed,
+        icon:
+            _busy
+                ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                : const Icon(Icons.picture_as_pdf_outlined),
+        label: Text(_busy ? 'Génération…' : 'Exporter PDF'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: IndustrialTokens.neon,
+          side: const BorderSide(color: IndustrialTokens.neonMuted),
+        ),
       ),
     );
   }
