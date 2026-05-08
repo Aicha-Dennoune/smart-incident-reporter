@@ -504,6 +504,9 @@ class IncidentService {
   Future<void> validateResolvedIncident({
     required String incidentId,
     required bool accepted,
+    int? rating,
+    String? ratingComment,
+    String? ratedByUserId,
   }) async {
     final incidentRef = _firestore.collection('incidents').doc(incidentId);
     final incident = await incidentRef.get();
@@ -513,15 +516,21 @@ class IncidentService {
     final createdBy = creatorUid(data);
 
     if (accepted) {
+      final boundedRating = (rating ?? 1).clamp(1, 5);
+      final cleanComment = (ratingComment ?? '').trim();
       final batch = _firestore.batch();
       batch.update(incidentRef, {
         'status': 'closed',
         'closedAt': FieldValue.serverTimestamp(),
+        'rating': boundedRating,
+        'ratingComment': cleanComment,
+        'ratingDate': FieldValue.serverTimestamp(),
+        'ratedBy': ratedByUserId,
       });
       if (technicianUid != null && technicianUid.isNotEmpty) {
         batch.set(
           _firestore.collection('users').doc(technicianUid),
-          {'score': FieldValue.increment(1)},
+          {'score': FieldValue.increment(boundedRating)},
           SetOptions(merge: true),
         );
       }
@@ -536,7 +545,10 @@ class IncidentService {
         await _notificationService.sendNotification(
           targetUserId: technicianUid,
           title: 'Validation confirmée',
-          message: 'La résolution de votre incident a été validée',
+          message:
+              cleanComment.isEmpty
+                  ? 'Nouvel avis reçu sur un incident: $boundedRating/5'
+                  : 'Nouvel avis reçu sur un incident: $boundedRating/5 - $cleanComment',
           incidentId: incidentId,
           type: 'resolution_approved',
         );
