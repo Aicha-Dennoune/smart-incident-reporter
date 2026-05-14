@@ -7,10 +7,18 @@ import '../utils/firestore_debug.dart';
 import '../theme/industrial_tokens.dart';
 
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
-  const AppTopBar({super.key, required this.title, this.showLogout = true});
+  const AppTopBar({
+    super.key,
+    required this.title,
+    this.showLogout = true,
+    this.actionsPrefix = const <Widget>[],
+  });
 
   final String title;
   final bool showLogout;
+
+  /// Inséré avant la cloche (ex. badge urgent sur le dashboard admin).
+  final List<Widget> actionsPrefix;
 
   Future<void> _openNotifications(BuildContext context) async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -135,6 +143,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       iconTheme: const IconThemeData(color: IndustrialTokens.textPrimary),
       actions: [
+        ...actionsPrefix,
         IconButton(
           onPressed: () => _openNotifications(context),
           tooltip: 'Notifications',

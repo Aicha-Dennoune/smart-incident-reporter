@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_colors.dart';
 import 'admin_affectation_page.dart';
 import 'admin_incidents_page.dart';
 import 'admin_home_page.dart';
@@ -26,31 +27,65 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
-        animationDuration: const Duration(milliseconds: 350),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(
-            icon: Icon(Icons.group_outlined),
-            label: 'Utilisateurs',
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          navigationBarTheme: NavigationBarThemeData(
+            backgroundColor: AppColors.surface.withValues(alpha: 0.96),
+            indicatorColor: AppColors.accent.withValues(alpha: 0.2),
+            surfaceTintColor: Colors.transparent,
+            elevation: 16,
+            shadowColor: Colors.black54,
+            height: 72,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+              if (states.contains(WidgetState.selected)) {
+                return const IconThemeData(color: AppColors.accent, size: 26);
+              }
+              return IconThemeData(color: AppColors.textMuted.withValues(alpha: 0.85), size: 24);
+            }),
+            labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+              if (states.contains(WidgetState.selected)) {
+                return const TextStyle(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                );
+              }
+              return const TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              );
+            }),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.swap_horiz_rounded),
-            label: 'Affectation',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.report_problem_outlined),
-            label: 'Incidents',
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) {
+            setState(() => _currentIndex = index);
+          },
+          animationDuration: const Duration(milliseconds: 350),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+            NavigationDestination(
+              icon: Icon(Icons.group_outlined),
+              label: 'Utilisateurs',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.swap_horiz_rounded),
+              label: 'Affectation',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.report_problem_outlined),
+              label: 'Incidents',
+            ),
+          ],
+        ),
       ),
     );
   }
