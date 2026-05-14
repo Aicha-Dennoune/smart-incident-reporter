@@ -7,6 +7,7 @@ import '../../services/incident_service.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../utils/firestore_debug.dart';
 import '../../widgets/app_top_bar.dart';
+import '../../widgets/incident_priority_chip.dart';
 import '../../widgets/industrial/neo_card.dart';
 
 class AdminIncidentsPage extends StatefulWidget {
@@ -187,6 +188,13 @@ class _AdminIncidentsPageState extends State<AdminIncidentsPage> {
                             style: const TextStyle(
                               color: IndustrialTokens.textSecondary,
                               fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IncidentPriorityChip(
+                              priorityRaw: data['priority']?.toString(),
                             ),
                           ),
                           if (createdBy != null && createdBy.isNotEmpty)

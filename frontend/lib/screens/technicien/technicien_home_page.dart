@@ -7,6 +7,7 @@ import '../../services/notification_service.dart';
 import '../../utils/firestore_debug.dart';
 import '../../theme/industrial_tokens.dart';
 import '../../widgets/app_top_bar.dart';
+import '../../widgets/incident_priority_chip.dart';
 import '../../widgets/industrial/neo_card.dart';
 import '../../widgets/industrial/section_title.dart';
 import '../chat/incident_chat_page.dart';
@@ -503,7 +504,16 @@ class _IncidentPreviewCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            _pill(status),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                IncidentPriorityChip(
+                  priorityRaw: data['priority']?.toString(),
+                ),
+                const SizedBox(height: 6),
+                _pill(status),
+              ],
+            ),
           ],
         ),
       ),

@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 /// - `{AI_API_BASE_URL}/ai/improve`     body `{"text":"..."}` → `{"text":"..."}` ou `{"improved":"..."}`
 /// - `{AI_API_BASE_URL}/ai/suggest-type` body `{"text":"..."}` → `{"type":"Electricite"}` (ou libellé proche)
 /// - `{AI_API_BASE_URL}/ai/suggest-solution` body `{"text":"..."}` → `{"solution":"..."}` ou `{"text":"..."}`
+/// - `{AI_API_BASE_URL}/ai/classify-priority` body `{"title":"...","description":"..."}` → `{"priority":"Faible|Moyenne|Critique"}`
 class AIServiceException implements Exception {
   AIServiceException(this.message);
   final String message;
@@ -131,6 +132,26 @@ class AIService {
     return out;
   }
 
+  Future<String?> suggestPriority({
+    required String title,
+    required String description,
+  }) async {
+    final t = title.trim();
+    final d = description.trim();
+    if (t.isEmpty && d.isEmpty) {
+      throw AIServiceException('Titre et description vides.');
+    }
+    final json = await _post('/ai/classify-priority', {
+      'title': t,
+      'description': d,
+    });
+    final raw = _firstNonEmptyString(
+      json,
+      ['priority', 'priorite', 'result', 'text'],
+    );
+    return normalizePriority(raw);
+  }
+
   static String? normalizeIncidentType(String? raw) {
     if (raw == null) return null;
     var t = raw.trim().toLowerCase();
@@ -142,6 +163,16 @@ class AIService {
     if (t == 'electricite') return 'Electricite';
     if (t == 'mecanique') return 'Mecanique';
     if (t == 'eau') return 'Eau';
+    return null;
+  }
+
+  static String? normalizePriority(String? raw) {
+    if (raw == null) return null;
+    var t = raw.trim().toLowerCase();
+    t = t.replaceAll('é', 'e').replaceAll('è', 'e');
+    if (t.contains('crit')) return 'Critique';
+    if (t.contains('moy')) return 'Moyenne';
+    if (t.contains('faib')) return 'Faible';
     return null;
   }
 }

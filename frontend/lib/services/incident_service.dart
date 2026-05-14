@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 
+import 'ai_service.dart';
 import 'notification_service.dart';
 
 /// Résultat de [IncidentService.createIncident].
@@ -25,6 +26,7 @@ class IncidentService {
 
   final FirebaseFirestore _firestore;
   final NotificationService _notificationService;
+  final AIService _aiService = AIService();
   static const String _cloudinaryCloudName = 'dqkqezb7y';
   static const String _cloudinaryUploadPreset = String.fromEnvironment(
     'CLOUDINARY_UPLOAD_PRESET',
@@ -216,13 +218,44 @@ class IncidentService {
     );
   }
 
+  /// 0 = Critique (en tête), 1 = Moyenne, 2 = Faible.
+  static int prioritySortRank(String? raw) {
+    final p = (raw ?? '').trim().toLowerCase();
+    if (p.contains('crit')) return 0;
+    if (p.contains('moy')) return 1;
+    if (p.contains('faib')) return 2;
+    return 1;
+  }
+
+  /// Libellé badge (CRITIQUE / MOYENNE / FAIBLE), aligné sur l’UI admin.
+  static String priorityBadgeLabel(String? raw) {
+    final p = (raw ?? '').trim().toLowerCase();
+    if (p.contains('crit')) return 'CRITIQUE';
+    if (p.contains('moy')) return 'MOYENNE';
+    if (p.contains('faib')) return 'FAIBLE';
+    return 'MOYENNE';
+  }
+
+  static void _sortByPriorityThenCreatedAtDesc(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    docs.sort((a, b) {
+      final ra = prioritySortRank(a.data()['priority']?.toString());
+      final rb = prioritySortRank(b.data()['priority']?.toString());
+      if (ra != rb) return ra.compareTo(rb);
+      return _createdAtMillis(
+        b.data(),
+      ).compareTo(_createdAtMillis(a.data()));
+    });
+  }
+
   /// Tous les incidents, triés (à partir d'un snapshot Firestore).
   static List<QueryDocumentSnapshot<Map<String, dynamic>>> sortedIncidentDocs(
     QuerySnapshot<Map<String, dynamic>>? snap,
   ) {
     if (snap == null) return [];
     final docs = snap.docs.toList();
-    _sortByCreatedAtDesc(docs);
+    _sortByPriorityThenCreatedAtDesc(docs);
     return docs;
   }
 
@@ -247,7 +280,7 @@ class IncidentService {
     if (snap == null) return [];
     final docs =
         snap.docs.where((d) => matchesAssignee(d.data(), uid)).toList();
-    _sortByCreatedAtDesc(docs);
+    _sortByPriorityThenCreatedAtDesc(docs);
     return docs;
   }
 
@@ -334,12 +367,24 @@ class IncidentService {
     Uint8List? imageBytes,
     String? imageName,
   }) async {
+    var priority = 'Moyenne';
+    try {
+      final predicted = await _aiService.suggestPriority(
+        title: title,
+        description: description,
+      );
+      if (predicted != null) priority = predicted;
+    } catch (_) {
+      // Fallback silencieux pour ne jamais bloquer la création d’incident.
+    }
+
     final docRef = _firestore.collection('incidents').doc();
 
     await docRef.set({
       'title': title.trim(),
       'description': description.trim(),
       'type': type.trim(),
+      'priority': priority,
       'imageUrl': '',
       'status': 'open',
       'createdBy': createdBy,
