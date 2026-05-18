@@ -30,7 +30,7 @@ class _TopSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       child: Column(
         children: [
           const SizedBox(height: 8),
@@ -99,18 +99,18 @@ class _TopSection extends StatelessWidget {
                   label: 'Securise',
                 ),
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 6),
               Expanded(
                 child: _FeatureItem(icon: Icons.schedule, label: 'Temps reel'),
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 6),
               Expanded(
                 child: _FeatureItem(
                   icon: Icons.analytics_outlined,
                   label: 'Analytique',
                 ),
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 6),
               Expanded(
                 child: _FeatureItem(
                   icon: Icons.groups_outlined,
@@ -136,22 +136,54 @@ class _FeatureItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        AspectRatio(
+          aspectRatio: 1,
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.surfaceHighlight.withValues(alpha: 0.9),
+                  AppColors.surface.withValues(alpha: 0.88),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.accentMuted.withValues(alpha: 0.55),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.18),
+                  blurRadius: 14,
+                  spreadRadius: 0,
+                ),
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.08),
+                  blurRadius: 22,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(icon, color: AppColors.accent, size: 32),
+            ),
           ),
-          child: Icon(icon, color: AppColors.white),
         ),
         const SizedBox(height: 8),
         Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            color: AppColors.gray,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            height: 1.15,
+            letterSpacing: 0.15,
           ),
         ),
       ],

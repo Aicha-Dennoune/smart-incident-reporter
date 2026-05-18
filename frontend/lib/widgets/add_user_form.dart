@@ -79,7 +79,10 @@ class _AddUserFormState extends State<AddUserForm> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFFE8F5E9),
-      title: const Text('Ajouter utilisateur'),
+      title: const Text(
+        'Ajouter utilisateur',
+        style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       content: SizedBox(
         width: 460,
