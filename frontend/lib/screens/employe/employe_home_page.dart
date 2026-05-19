@@ -95,7 +95,7 @@ class _EmployeHomeTab extends StatelessWidget {
     final notifService = NotificationService();
 
     return Scaffold(
-      appBar: const AppTopBar(title: 'Accueil'),
+      appBar: const AppTopBar(title: 'Espace Employé'),
       body:
           uid == null
               ? const Center(child: Text('Non connecté'))

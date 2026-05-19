@@ -91,7 +91,7 @@ class _AdminHomePageState extends State<AdminHomePage> with TickerProviderStateM
                 : 0;
 
         PreferredSizeWidget appBar = AppTopBar(
-          title: 'Tableau de bord',
+          title: 'Espace Administrateur',
           actionsPrefix: [
             _DashboardUrgentBadge(count: urgentCount, pulse: _pulse),
             const SizedBox(width: 4),
